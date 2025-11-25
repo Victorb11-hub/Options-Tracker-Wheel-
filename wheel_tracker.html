@@ -381,9 +381,156 @@
         .tab-content.active {
             display: block;
         }
+
+        /* Login/Signup Styles */
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #000;
+        }
+
+        .auth-box {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .auth-title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fff;
+            text-align: center;
+        }
+
+        .auth-subtitle {
+            color: #888;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .auth-input:focus {
+            outline: none;
+            border-color: #00ff88;
+        }
+
+        .auth-button {
+            width: 100%;
+            padding: 12px;
+            background: #00ff88;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+
+        .auth-button:hover {
+            background: #00cc6a;
+        }
+
+        .auth-link {
+            text-align: center;
+            color: #888;
+        }
+
+        .auth-link a {
+            color: #00ff88;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .auth-link a:hover {
+            text-decoration: underline;
+        }
+
+        .auth-error {
+            background: #ff4444;
+            color: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .logout-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background: #ff4444;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            z-index: 1000;
+        }
+
+        .logout-button:hover {
+            background: #cc0000;
+        }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
+    <!-- Login/Signup Screen -->
+    <div id="authScreen" class="auth-container">
+        <div class="auth-box">
+            <div id="loginForm">
+                <h1 class="auth-title">Options Wheel Tracker</h1>
+                <p class="auth-subtitle">Login to your account</p>
+                <div id="loginError" class="auth-error hidden"></div>
+                <input type="text" id="loginUsername" class="auth-input" placeholder="Username">
+                <input type="password" id="loginPassword" class="auth-input" placeholder="Password">
+                <button onclick="login()" class="auth-button">Login</button>
+                <div class="auth-link">
+                    Don't have an account? <a onclick="showSignup()">Sign up</a>
+                </div>
+            </div>
+
+            <div id="signupForm" class="hidden">
+                <h1 class="auth-title">Create Account</h1>
+                <p class="auth-subtitle">Sign up for Options Wheel Tracker</p>
+                <div id="signupError" class="auth-error hidden"></div>
+                <input type="text" id="signupUsername" class="auth-input" placeholder="Username">
+                <input type="password" id="signupPassword" class="auth-input" placeholder="Password">
+                <input type="password" id="signupPasswordConfirm" class="auth-input" placeholder="Confirm Password">
+                <button onclick="signup()" class="auth-button">Create Account</button>
+                <div class="auth-link">
+                    Already have an account? <a onclick="showLogin()">Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Tracker (hidden until logged in) -->
+    <div id="trackerApp" class="hidden">
+        <button onclick="logout()" class="logout-button">Logout</button>
+        
     <div class="container">
         <h1>Options Wheel Strategy Tracker</h1>
         <p class="subtitle">Track your puts and calls with automatic calculations</p>
@@ -856,8 +1003,161 @@
             </div>
         </div>
     </div>
+    </div> <!-- End trackerApp -->
 
     <script>
+        // Authentication System
+        let currentUser = null;
+        let users = JSON.parse(localStorage.getItem('trackerUsers')) || {};
+
+        function showLogin() {
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('signupForm').classList.add('hidden');
+            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('signupError').classList.add('hidden');
+        }
+
+        function showSignup() {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('signupForm').classList.remove('hidden');
+            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('signupError').classList.add('hidden');
+        }
+
+        function login() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+
+            if (!username || !password) {
+                errorDiv.textContent = 'Please enter username and password';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            if (!users[username]) {
+                errorDiv.textContent = 'Username not found';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            if (users[username].password !== password) {
+                errorDiv.textContent = 'Incorrect password';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            // Successful login
+            currentUser = username;
+            localStorage.setItem('currentUser', username);
+            showTrackerApp();
+        }
+
+        function signup() {
+            const username = document.getElementById('signupUsername').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
+            const errorDiv = document.getElementById('signupError');
+
+            if (!username || !password || !passwordConfirm) {
+                errorDiv.textContent = 'Please fill in all fields';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            if (username.length < 3) {
+                errorDiv.textContent = 'Username must be at least 3 characters';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            if (password.length < 6) {
+                errorDiv.textContent = 'Password must be at least 6 characters';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            if (password !== passwordConfirm) {
+                errorDiv.textContent = 'Passwords do not match';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            if (users[username]) {
+                errorDiv.textContent = 'Username already exists';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            // Create new user
+            users[username] = {
+                password: password,
+                created: new Date().toISOString()
+            };
+            localStorage.setItem('trackerUsers', JSON.stringify(users));
+
+            // Auto-login
+            currentUser = username;
+            localStorage.setItem('currentUser', username);
+            showTrackerApp();
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                currentUser = null;
+                localStorage.removeItem('currentUser');
+                document.getElementById('authScreen').classList.remove('hidden');
+                document.getElementById('trackerApp').classList.add('hidden');
+                showLogin();
+                // Clear form fields
+                document.getElementById('loginUsername').value = '';
+                document.getElementById('loginPassword').value = '';
+            }
+        }
+
+        function showTrackerApp() {
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('trackerApp').classList.remove('hidden');
+            // Load user's specific data
+            loadUserData();
+            loadCustomAccounts();
+            setTodayDate();
+            renderOpenTrades();
+            renderAllTrades();
+            updateStats();
+        }
+
+        function checkAuth() {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser && users[savedUser]) {
+                currentUser = savedUser;
+                showTrackerApp();
+            } else {
+                document.getElementById('authScreen').classList.remove('hidden');
+                document.getElementById('trackerApp').classList.add('hidden');
+            }
+        }
+
+        // User-specific data storage
+        function getUserStorageKey(key) {
+            return `${currentUser}_${key}`;
+        }
+
+        function loadUserData() {
+            trades = JSON.parse(localStorage.getItem(getUserStorageKey('wheelTrades'))) || [];
+            closedTrades = JSON.parse(localStorage.getItem(getUserStorageKey('wheelClosedTrades'))) || [];
+            tradeGroups = JSON.parse(localStorage.getItem(getUserStorageKey('wheelTradeGroups'))) || [];
+            customAccounts = JSON.parse(localStorage.getItem(getUserStorageKey('customAccounts'))) || [];
+        }
+
+        function saveUserData() {
+            localStorage.setItem(getUserStorageKey('wheelTrades'), JSON.stringify(trades));
+            localStorage.setItem(getUserStorageKey('wheelClosedTrades'), JSON.stringify(closedTrades));
+            localStorage.setItem(getUserStorageKey('wheelTradeGroups'), JSON.stringify(tradeGroups));
+            localStorage.setItem(getUserStorageKey('customAccounts'), JSON.stringify(customAccounts));
+        }
+
+        // Original variables
         let trades = [];
         let closedTrades = [];
         let tradeGroups = []; // Groups of related trades (open + close)
@@ -888,9 +1188,7 @@
 
         // Load data from localStorage on page load
         window.onload = function() {
-            loadData();
-            loadCustomAccounts();
-            setTodayDate();
+            checkAuth(); // Check authentication and show appropriate screen
         };
 
         function setTodayDate() {
@@ -1028,11 +1326,16 @@
         }
 
         function saveCustomAccounts() {
-            localStorage.setItem('customAccounts', JSON.stringify(customAccounts));
+            if (currentUser) {
+                localStorage.setItem(getUserStorageKey('customAccounts'), JSON.stringify(customAccounts));
+            } else {
+                localStorage.setItem('customAccounts', JSON.stringify(customAccounts));
+            }
         }
 
         function loadCustomAccounts() {
-            const saved = localStorage.getItem('customAccounts');
+            const key = currentUser ? getUserStorageKey('customAccounts') : 'customAccounts';
+            const saved = localStorage.getItem(key);
             if (saved) {
                 try {
                     customAccounts = JSON.parse(saved);
