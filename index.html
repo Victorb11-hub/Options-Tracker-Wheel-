@@ -3512,9 +3512,15 @@
         }
 
         function saveData() {
-            localStorage.setItem('wheelTrades', JSON.stringify(trades));
-            localStorage.setItem('wheelClosedTrades', JSON.stringify(closedTrades));
-            localStorage.setItem('wheelTradeGroups', JSON.stringify(tradeGroups));
+            if (currentUser) {
+                localStorage.setItem(getUserStorageKey('wheelTrades'), JSON.stringify(trades));
+                localStorage.setItem(getUserStorageKey('wheelClosedTrades'), JSON.stringify(closedTrades));
+                localStorage.setItem(getUserStorageKey('wheelTradeGroups'), JSON.stringify(tradeGroups));
+            } else {
+                localStorage.setItem('wheelTrades', JSON.stringify(trades));
+                localStorage.setItem('wheelClosedTrades', JSON.stringify(closedTrades));
+                localStorage.setItem('wheelTradeGroups', JSON.stringify(tradeGroups));
+            }
         }
 
         function loadData() {
