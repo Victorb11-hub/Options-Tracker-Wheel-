@@ -1341,7 +1341,7 @@
                     t.symbol === symbol &&
                     t.action === 'sell' &&
                     t.status === 'open' &&
-                    t.strike === strike
+                    (strike === 0 || t.strike === strike) // If strike is 0 (blank), match any strike
                 );
 
                 if (matchingOpenTrade) {
@@ -1351,18 +1351,18 @@
                     matchingOpenTrade.status = 'closed';
                     matchingOpenTrade.dateClosed = dateOpened;
                     
-                    // Create the closing trade
+                    // Create the closing trade - use the original trade's strike if BUY strike was blank
                     const closingTrade = {
                         id: Date.now() + Math.random(),
                         tradeRef: tradeRef,
                         account: account || matchingOpenTrade.account,
                         groupId: matchingOpenTrade.groupId,
                         symbol,
-                        contracts,
-                        strike,
+                        contracts: contracts || matchingOpenTrade.contracts,
+                        strike: strike || matchingOpenTrade.strike, // Use original strike if blank
                         premium,
                         action: 'buy',
-                        type,
+                        type: type || matchingOpenTrade.type, // Use original type if blank
                         dateOpened,
                         expDate,
                         priceAtAction,
