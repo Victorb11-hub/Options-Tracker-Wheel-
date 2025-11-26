@@ -1942,8 +1942,8 @@
                 return 0; // Assignment itself has no P&L (tracked in put premium)
             }
             
-            if (trade.isCalledAway && trade.fullCyclePL !== undefined) {
-                return trade.fullCyclePL; // Return the full cycle P&L
+            if (trade.isCalledAway && trade.cycleDetails) {
+                return trade.cycleDetails.stockProfit; // Return ONLY stock profit for this row
             }
             
             const premiumCollected = trade.premium * trade.contracts * 100;
@@ -3255,10 +3255,7 @@
                                             <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
                                             <td>$${(trade.priceAtAction || 0).toFixed(2)}</td>
                                             <td class="${parseFloat(otm) >= 0 ? 'positive-value' : 'negative-value'}">${otm}%</td>
-                                            <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">
-                                                $${pl.toFixed(2)}
-                                                ${trade.isCalledAway && trade.cycleDetails ? `<br><span style="font-size: 0.8rem; color: #888;">Stock Profit: ${trade.cycleDetails.stockProfit >= 0 ? '+' : ''}$${trade.cycleDetails.stockProfit.toFixed(2)}</span>` : ''}
-                                            </td>
+                                            <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
                                             <td>${trade.info || '-'}</td>
                                             <td style="color: #00ff88;"><strong>${trade.tradeRef || '-'}</strong></td>
                                             <td>${trade.account || '-'}</td>
