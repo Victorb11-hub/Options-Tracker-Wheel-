@@ -4020,6 +4020,7 @@
                 premium: premium,
                 dateOpened: dateOpened,
                 expDate: expDate,
+                priceAtAction: stock.assignedPrice || stock.costBasis, // Use stock's current price
                 tradeRef: stock.tradeRef,
                 account: stock.account,
                 info: notes || `Covered call - ${stock.shares} shares`,
@@ -4102,6 +4103,7 @@
                 strike: put.strike,
                 assignedPrice: assignmentPrice,
                 premium: 0,
+                priceAtAction: assignmentPrice,
                 dateOpened: assignDate,
                 expDate: assignDate,
                 tradeRef: put.tradeRef,
@@ -4228,6 +4230,7 @@
                 shares: stock.shares,
                 strike: salePriceNum,
                 premium: 0,
+                priceAtAction: salePriceNum,
                 dateOpened: calledAwayDate,
                 expDate: calledAwayDate,
                 tradeRef: stock.tradeRef,
