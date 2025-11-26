@@ -552,6 +552,7 @@
             <button class="tab" onclick="switchTab('open')">Open Positions</button>
             <button class="tab" onclick="switchTab('groups')">Closed Groups</button>
             <button class="tab" onclick="switchTab('all')">All Trades</button>
+            <button class="tab" onclick="switchTab('stock')">Stock Positions</button>
         </div>
 
         <div class="stats-grid">
@@ -832,6 +833,30 @@
                                 No trades yet.
                             </td>
                         </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-content" id="stockTab">
+            <div class="table-container">
+                <div class="table-header">
+                    <div class="table-title">Stock Positions (Assigned)</div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Shares</th>
+                            <th>Cost Basis</th>
+                            <th>Assigned Date</th>
+                            <th>Original Put</th>
+                            <th>Covered Calls</th>
+                            <th>Account</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stockPositionsBody">
                     </tbody>
                 </table>
             </div>
@@ -1294,6 +1319,7 @@
             closedTrades = JSON.parse(localStorage.getItem(getUserStorageKey('wheelClosedTrades'))) || [];
             tradeGroups = JSON.parse(localStorage.getItem(getUserStorageKey('wheelTradeGroups'))) || [];
             customAccounts = JSON.parse(localStorage.getItem(getUserStorageKey('customAccounts'))) || [];
+            stockPositions = JSON.parse(localStorage.getItem(getUserStorageKey('stockPositions'))) || [];
             updateLastRefDisplay();
         }
 
@@ -1337,6 +1363,7 @@
             localStorage.setItem(getUserStorageKey('wheelClosedTrades'), JSON.stringify(closedTrades));
             localStorage.setItem(getUserStorageKey('wheelTradeGroups'), JSON.stringify(tradeGroups));
             localStorage.setItem(getUserStorageKey('customAccounts'), JSON.stringify(customAccounts));
+            localStorage.setItem(getUserStorageKey('stockPositions'), JSON.stringify(stockPositions));
         }
 
         // Original variables
@@ -1344,6 +1371,7 @@
         let closedTrades = [];
         let tradeGroups = []; // Groups of related trades (open + close)
         let customAccounts = []; // User-defined account names
+        let stockPositions = []; // Stock positions from assignments
         let editingIndex = -1;
         
         // Data version for migrations
@@ -1419,6 +1447,8 @@
                 renderAllTrades();
             } else if (tabName === 'groups') {
                 renderGroups();
+            } else if (tabName === 'stock') {
+                renderStockPositions();
             }
         }
 
@@ -1784,6 +1814,9 @@
                                 <button class="btn-small" onclick="editTrade(${actualIndex})">Edit</button>
                                 <button class="btn-small" style="background: #4488ff; color: #fff;" onclick="openRollModal(${actualIndex})">Roll</button>
                                 <button class="btn-small success" onclick="openCloseModal(${actualIndex})">Close</button>
+                                ${trade.type === 'put' && trade.action === 'sell' ? `
+                                    <button class="btn-small" style="background: #ff8844; color: #000;" onclick="assignStock(${actualIndex})">Assign</button>
+                                ` : ''}
                                 <button class="btn-small danger" onclick="deleteTrade(${actualIndex})">Delete</button>
                             </div>
                         </td>
@@ -3675,6 +3708,149 @@
                     }
                 }
             });
+        }
+
+        function assignStock(index) {
+            if (!confirm('Mark this put as assigned and convert to stock position?')) return;
+            
+            const put = trades[index];
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Create stock position
+            const stockPosition = {
+                id: Date.now(),
+                symbol: put.symbol,
+                shares: put.contracts * 100,
+                costBasis: put.strike,
+                totalCost: put.strike * put.contracts * 100,
+                assignedDate: today,
+                originalPutId: put.id,
+                originalPut: {
+                    strike: put.strike,
+                    premium: put.premium,
+                    contracts: put.contracts,
+                    dateOpened: put.dateOpened,
+                    tradeRef: put.tradeRef,
+                    premiumCollected: put.premium * put.contracts * 100
+                },
+                coveredCalls: [],
+                account: put.account || '',
+                tradeRef: put.tradeRef || '',
+                status: 'holding'
+            };
+            
+            // Mark put as assigned
+            put.status = 'assigned';
+            put.dateClosed = today;
+            put.closingNotes = 'Stock assigned';
+            
+            // Move put to closed trades
+            closedTrades.push(put);
+            trades.splice(index, 1);
+            
+            // Add to stock positions
+            stockPositions.push(stockPosition);
+            
+            // Save and render
+            saveData();
+            renderTables();
+            updateStats();
+            
+            alert(`${stockPosition.shares} shares of ${stockPosition.symbol} added to Stock Positions at $${stockPosition.costBasis.toFixed(2)} per share!`);
+        }
+
+        function renderStockPositions() {
+            const tbody = document.getElementById('stockPositionsBody');
+            if (!tbody) return;
+            
+            if (stockPositions.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align: center; color: #666; padding: 40px;">
+                            No stock positions yet. Assign a put to create a stock position.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = stockPositions.map((stock, index) => {
+                const callsCount = stock.coveredCalls.length;
+                const totalCallPremiums = stock.coveredCalls.reduce((sum, call) => sum + call.premium, 0);
+                
+                return `
+                    <tr>
+                        <td>${makeSymbolClickable(stock.symbol, false)}</td>
+                        <td><strong>${stock.shares}</strong></td>
+                        <td>$${stock.costBasis.toFixed(2)}<br><span style="font-size: 0.8rem; color: #888;">Total: $${stock.totalCost.toLocaleString()}</span></td>
+                        <td>${formatDate(stock.assignedDate)}</td>
+                        <td>
+                            Strike: $${stock.originalPut.strike.toFixed(2)}<br>
+                            Premium: $${stock.originalPut.premiumCollected.toFixed(2)}<br>
+                            <span style="font-size: 0.8rem; color: #888;">Ref: ${stock.originalPut.tradeRef || '-'}</span>
+                        </td>
+                        <td>
+                            ${callsCount} call${callsCount !== 1 ? 's' : ''}<br>
+                            ${callsCount > 0 ? `<span style="color: #00ff88;">+$${totalCallPremiums.toFixed(2)}</span>` : '-'}
+                        </td>
+                        <td>${stock.account || '-'}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-small" style="background: #00ff88; color: #000;" onclick="calledAway(${index})">Called Away</button>
+                                <button class="btn-small danger" onclick="deleteStockPosition(${index})">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function calledAway(index) {
+            const stock = stockPositions[index];
+            
+            const salePrice = prompt(`Enter sale price per share for ${stock.symbol}:`, stock.costBasis);
+            if (!salePrice) return;
+            
+            const salePriceNum = parseFloat(salePrice);
+            if (isNaN(salePriceNum) || salePriceNum <= 0) {
+                alert('Invalid sale price');
+                return;
+            }
+            
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Calculate full cycle P&L
+            const putPremium = stock.originalPut.premiumCollected;
+            const callPremiums = stock.coveredCalls.reduce((sum, call) => sum + call.premium, 0);
+            const stockProfit = (salePriceNum - stock.costBasis) * stock.shares;
+            const totalPL = putPremium + callPremiums + stockProfit;
+            
+            // Remove from active positions
+            stockPositions.splice(index, 1);
+            
+            // Save and render
+            saveData();
+            renderStockPositions();
+            updateStats();
+            
+            alert(`✅ Stock Called Away!\n\n` +
+                  `Symbol: ${stock.symbol}\n` +
+                  `Shares: ${stock.shares}\n` +
+                  `Cost Basis: $${stock.costBasis.toFixed(2)}\n` +
+                  `Sale Price: $${salePriceNum.toFixed(2)}\n\n` +
+                  `Put Premium: +$${putPremium.toFixed(2)}\n` +
+                  `Call Premiums: +$${callPremiums.toFixed(2)}\n` +
+                  `Stock Profit: ${stockProfit >= 0 ? '+' : ''}$${stockProfit.toFixed(2)}\n\n` +
+                  `💰 Total P&L: ${totalPL >= 0 ? '+' : ''}$${totalPL.toFixed(2)}`);
+        }
+
+        function deleteStockPosition(index) {
+            if (!confirm('Delete this stock position?')) return;
+            
+            stockPositions.splice(index, 1);
+            saveData();
+            renderStockPositions();
+            updateStats();
         }
 
         function deleteTrade(index) {
