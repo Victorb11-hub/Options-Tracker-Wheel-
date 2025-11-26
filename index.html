@@ -1336,9 +1336,14 @@
                     migration_v2_markRolledTrades();
                 }
                 
+                // Migration 2 → 3: Add priceAtAction to trades missing it
+                if (currentVersion < 3) {
+                    migration_v3_addPriceAtAction();
+                }
+                
                 // Future migrations go here
-                // if (currentVersion < 3) {
-                //     migration_v3_someOtherFix();
+                // if (currentVersion < 4) {
+                //     migration_v4_someOtherFix();
                 // }
                 
                 // Update version
@@ -1390,6 +1395,52 @@
             });
             
             console.log('Migration v2 complete: Marked', markedCount, 'trades as rolled');
+        }
+
+        // Migration v2 → v3: Add priceAtAction to trades missing it
+        function migration_v3_addPriceAtAction() {
+            console.log('Running migration v3: Adding priceAtAction to trades');
+            
+            let fixedCount = 0;
+            
+            // Fix open trades
+            trades.forEach(trade => {
+                if (trade.priceAtAction === undefined) {
+                    trade.priceAtAction = trade.strike || 0;
+                    fixedCount++;
+                    console.log('Added priceAtAction to trade:', trade.symbol, trade.strike);
+                }
+            });
+            
+            // Fix closed trades
+            closedTrades.forEach(trade => {
+                if (trade.priceAtAction === undefined) {
+                    if (trade.isAssignment && trade.assignedPrice) {
+                        trade.priceAtAction = trade.assignedPrice;
+                    } else if (trade.isCalledAway && trade.strike) {
+                        trade.priceAtAction = trade.strike;
+                    } else {
+                        trade.priceAtAction = trade.strike || 0;
+                    }
+                    fixedCount++;
+                    console.log('Added priceAtAction to closed trade:', trade.symbol, trade.strike);
+                }
+            });
+            
+            // Fix trades in groups
+            tradeGroups.forEach(group => {
+                if (group.trades && Array.isArray(group.trades)) {
+                    group.trades.forEach(trade => {
+                        if (trade.priceAtAction === undefined) {
+                            trade.priceAtAction = trade.strike || 0;
+                            fixedCount++;
+                            console.log('Added priceAtAction to group trade:', trade.symbol, trade.strike);
+                        }
+                    });
+                }
+            });
+            
+            console.log('Migration v3 complete: Fixed', fixedCount, 'trades');
         }
 
         function checkAuth() {
@@ -1469,7 +1520,7 @@
         let editingIndex = -1;
         
         // Data version for migrations
-        const CURRENT_DATA_VERSION = 2;
+        const CURRENT_DATA_VERSION = 3;
         let editingFromArray = 'open'; // Track which array we're editing from
         let editingFromGroup = -1; // Track if editing from a group
         let closingIndex = -1;
@@ -1921,7 +1972,7 @@
                         <td>${formatDate(trade.expDate)}</td>
                         <td>${cashRequired > 0 ? '$' + cashRequired.toLocaleString() : '-'}</td>
                         <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
-                        <td>$${trade.priceAtAction.toFixed(2)}</td>
+                        <td>$${(trade.priceAtAction || 0).toFixed(2)}</td>
                         <td class="${parseFloat(otm) >= 0 ? 'positive-value' : 'negative-value'}">${otm}%</td>
                         <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
                         <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${trade.info || '-'}</td>
@@ -2057,7 +2108,7 @@
                         <td style="color: ${daysColor}; font-weight: bold; font-size: 1.1rem;">${daysToExp}</td>
                         <td>${cashRequired > 0 ? '$' + cashRequired.toLocaleString() : '-'}</td>
                         <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
-                        <td>$${trade.priceAtAction.toFixed(2)}</td>
+                        <td>$${(trade.priceAtAction || 0).toFixed(2)}</td>
                         <td class="${parseFloat(otm) >= 0 ? 'positive-value' : 'negative-value'}">${otm}%</td>
                         <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
                         <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${trade.info || '-'}</td>
@@ -2150,7 +2201,7 @@
                         <td>${formatDate(trade.expDate)}</td>
                         <td>${cashRequired > 0 ? '$' + cashRequired.toLocaleString() : '-'}</td>
                         <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
-                        <td>$${trade.priceAtAction.toFixed(2)}</td>
+                        <td>$${(trade.priceAtAction || 0).toFixed(2)}</td>
                         <td class="${parseFloat(otm) >= 0 ? 'positive-value' : 'negative-value'}">${otm}%</td>
                         <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
                         <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${trade.info || '-'}</td>
@@ -3072,7 +3123,7 @@
                                             <td>${formatDate(trade.expDate)}</td>
                                             <td>${cashReq > 0 ? '$' + cashReq.toLocaleString() : '-'}</td>
                                             <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
-                                            <td>$${trade.priceAtAction.toFixed(2)}</td>
+                                            <td>$${(trade.priceAtAction || 0).toFixed(2)}</td>
                                             <td class="${parseFloat(otm) >= 0 ? 'positive-value' : 'negative-value'}">${otm}%</td>
                                             <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
                                             <td>${trade.info || '-'}</td>
