@@ -1025,7 +1025,7 @@
         }
 
         function login() {
-            const username = document.getElementById('loginUsername').value.trim();
+            const username = document.getElementById('loginUsername').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
             const errorDiv = document.getElementById('loginError');
 
@@ -1054,7 +1054,7 @@
         }
 
         function signup() {
-            const username = document.getElementById('signupUsername').value.trim();
+            const username = document.getElementById('signupUsername').value.trim().toLowerCase();
             const password = document.getElementById('signupPassword').value;
             const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
             const errorDiv = document.getElementById('signupError');
@@ -1067,12 +1067,6 @@
 
             if (username.length < 3) {
                 errorDiv.textContent = 'Username must be at least 3 characters';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
-            if (password.length < 6) {
-                errorDiv.textContent = 'Password must be at least 6 characters';
                 errorDiv.classList.remove('hidden');
                 return;
             }
