@@ -677,7 +677,7 @@
                             <th>Premium</th>
                             <th>Action</th>
                             <th>Type</th>
-                            <th>Date <span style="cursor: pointer; user-select: none;" onclick="sortOpenTrades('dateOpened', 'asc')">▲</span><span style="cursor: pointer; user-select: none;" onclick="sortOpenTrades('dateOpened', 'desc')">▼</span></th>
+                            <th>Date Opened <span style="cursor: pointer; user-select: none;" onclick="sortOpenTrades('dateOpened', 'asc')">▲</span><span style="cursor: pointer; user-select: none;" onclick="sortOpenTrades('dateOpened', 'desc')">▼</span></th>
                             <th>Exp Date</th>
                             <th>Cash Required</th>
                             <th>% Return</th>
@@ -718,7 +718,7 @@
                             <th>Premium</th>
                             <th>Action</th>
                             <th>Type</th>
-                            <th>Date <span style="cursor: pointer; user-select: none;" onclick="sortFilteredTrades('dateOpened', 'asc')">▲</span><span style="cursor: pointer; user-select: none;" onclick="sortFilteredTrades('dateOpened', 'desc')">▼</span></th>
+                            <th>Date Opened <span style="cursor: pointer; user-select: none;" onclick="sortFilteredTrades('dateOpened', 'asc')">▲</span><span style="cursor: pointer; user-select: none;" onclick="sortFilteredTrades('dateOpened', 'desc')">▼</span></th>
                             <th>Exp Date</th>
                             <th>Cash Required</th>
                             <th>% Return</th>
@@ -754,7 +754,7 @@
                             <th>Premium</th>
                             <th>Action</th>
                             <th>Type</th>
-                            <th>Date <span style="cursor: pointer; user-select: none;" onclick="sortExpirationTrades('dateOpened', 'asc')">▲</span><span style="cursor: pointer; user-select: none;" onclick="sortExpirationTrades('dateOpened', 'desc')">▼</span></th>
+                            <th>Date Opened <span style="cursor: pointer; user-select: none;" onclick="sortExpirationTrades('dateOpened', 'asc')">▲</span><span style="cursor: pointer; user-select: none;" onclick="sortExpirationTrades('dateOpened', 'desc')">▼</span></th>
                             <th>Exp Date</th>
                             <th>Days Till Exp</th>
                             <th>Cash Required</th>
@@ -1272,8 +1272,8 @@
         let groupsSortOrder = 'desc';
         let filteredTradesSortField = 'dateOpened';
         let filteredTradesSortOrder = 'desc';
-        let expirationTradesSortField = 'expDate';
-        let expirationTradesSortOrder = 'asc'; // Expiration should default to soonest first
+        let expirationTradesSortField = 'dateOpened';
+        let expirationTradesSortOrder = 'desc'; // Changed to match other tables
         
         // Undo functionality
         let lastDeletedTrade = null;
@@ -2443,7 +2443,7 @@
                                     <th>Premium</th>
                                     <th>Action</th>
                                     <th>Type</th>
-                                    <th>Date <span style="cursor: pointer; user-select: none;" onclick="sortGroupTrades(${actualGroupIndex}, 'dateOpened', 'asc')">▲</span><span style="cursor: pointer; user-select: none;" onclick="sortGroupTrades(${actualGroupIndex}, 'dateOpened', 'desc')">▼</span></th>
+                                    <th>Date Opened <span style="cursor: pointer; user-select: none;" onclick="sortGroupTrades(${actualGroupIndex}, 'dateOpened', 'asc')">▲</span><span style="cursor: pointer; user-select: none;" onclick="sortGroupTrades(${actualGroupIndex}, 'dateOpened', 'desc')">▼</span></th>
                                     <th>Exp Date</th>
                                     <th>Cash Required</th>
                                     <th>% Return</th>
