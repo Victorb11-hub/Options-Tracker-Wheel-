@@ -2100,23 +2100,22 @@
             const openTrades = trades.map(t => ({...t, isOpen: true}));
             const closedTradesArray = closedTrades.map(t => ({...t, isOpen: false}));
             
-            // Also get trades from groups that might not be in closedTrades
+            // Build a Set of IDs we've already included from open and closed
+            const includedIds = new Set();
+            openTrades.forEach(t => { if (t.id) includedIds.add(t.id); });
+            closedTradesArray.forEach(t => { if (t.id) includedIds.add(t.id); });
+            
+            // Only add trades from groups if they're NOT in open or closed arrays
             const groupTrades = [];
-            const seenIds = new Set();
-            
-            // Track IDs from open and closed trades
-            openTrades.forEach(t => { if (t.id) seenIds.add(t.id); });
-            closedTradesArray.forEach(t => { if (t.id) seenIds.add(t.id); });
-            
             tradeGroups.forEach(group => {
                 if (group.trades && Array.isArray(group.trades)) {
                     group.trades.forEach(trade => {
-                        // Primary deduplication: Check by ID
-                        if (trade.id && seenIds.has(trade.id)) {
-                            return; // Skip - this exact trade already exists
+                        // Skip if already included (by ID or by field matching)
+                        if (trade.id && includedIds.has(trade.id)) {
+                            return; // Already in open or closed
                         }
                         
-                        // Fallback deduplication: Check by fields (for old trades without IDs)
+                        // Fallback: field matching for old trades without IDs
                         const alreadyExists = openTrades.some(t => 
                             t.symbol === trade.symbol && 
                             t.dateOpened === trade.dateOpened && 
@@ -2132,7 +2131,7 @@
                         );
                         
                         if (!alreadyExists) {
-                            if (trade.id) seenIds.add(trade.id); // Track this ID
+                            if (trade.id) includedIds.add(trade.id);
                             groupTrades.push({...trade, isOpen: trade.status === 'open'});
                         }
                     });
