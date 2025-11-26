@@ -1753,6 +1753,11 @@
         }
 
         function calculateCashRequired(trade) {
+            // Skip assignment and called-away trades
+            if (trade.isAssignment || trade.isCalledAway) {
+                return 0;
+            }
+            
             if (trade.type === 'put' && trade.action === 'sell') {
                 return trade.strike * trade.contracts * 100;
             }
@@ -1760,6 +1765,11 @@
         }
 
         function calculateReturnPercent(trade) {
+            // Skip assignment and called-away trades for return calculation
+            if (trade.isAssignment || trade.isCalledAway) {
+                return "0.00";
+            }
+            
             const cashRequired = calculateCashRequired(trade);
             const totalPremium = trade.premium * trade.contracts * 100;
             
@@ -1775,6 +1785,11 @@
         }
 
         function calculateOTM(trade) {
+            // Skip assignment and called-away trades for OTM calculation
+            if (trade.isAssignment || trade.isCalledAway) {
+                return "0.00";
+            }
+            
             if (trade.type === 'put') {
                 const diff = ((trade.priceAtAction - trade.strike) / trade.strike * 100);
                 return diff.toFixed(2);
@@ -1785,6 +1800,15 @@
         }
 
         function calculatePL(trade) {
+            // Handle special stock trades (assignment, called-away)
+            if (trade.isAssignment) {
+                return 0; // Assignment itself has no P&L (tracked in put premium)
+            }
+            
+            if (trade.isCalledAway && trade.fullCyclePL !== undefined) {
+                return trade.fullCyclePL; // Return the full cycle P&L
+            }
+            
             const premiumCollected = trade.premium * trade.contracts * 100;
             const closingCost = (trade.closingPremium || 0) * trade.contracts * 100;
             
@@ -3997,6 +4021,7 @@
             saveData();
             closeSellCallModal();
             renderTables();
+            renderStockPositions();
             updateStats();
             
             alert(`✅ Covered Call Sold!\n\nSold ${stock.shares / 100} call contract(s) at $${strike.toFixed(2)}\nPremium collected: $${premiumTotal.toFixed(2)}\n\nRunning P&L updated in Stock Positions!`);
@@ -4078,6 +4103,7 @@
             // Save and render
             saveData();
             renderTables();
+            renderStockPositions();
             updateStats();
             closeAssignModal();
             
