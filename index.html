@@ -2181,16 +2181,50 @@
             // Filter out any invalid groups
             tradeGroups = tradeGroups.filter(g => g.trades && Array.isArray(g.trades) && g.trades.length > 0);
             
-            if (tradeGroups.length === 0) {
+            // Filter groups to only show if there are NO open trades with the same Trade Ref #
+            const groupsToDisplay = tradeGroups.filter(group => {
+                // Get Trade Ref # from group (check group name or first trade)
+                let groupTradeRef = null;
+                
+                // Try to extract from group name "Trade Ref: XXX"
+                if (group.name && group.name.startsWith('Trade Ref: ')) {
+                    groupTradeRef = group.name.replace('Trade Ref: ', '');
+                }
+                
+                // Fallback: get from first trade
+                if (!groupTradeRef && group.trades && group.trades.length > 0) {
+                    groupTradeRef = group.trades[0].tradeRef;
+                }
+                
+                // If no Trade Ref, show the group (it's a manual group)
+                if (!groupTradeRef || !groupTradeRef.trim()) {
+                    return true;
+                }
+                
+                // Check if there are any OPEN trades with this Trade Ref #
+                const hasOpenTrades = trades.some(t => 
+                    t.tradeRef && 
+                    t.tradeRef.trim() === groupTradeRef.trim() && 
+                    t.status === 'open'
+                );
+                
+                // Only show group if there are NO open trades with this Trade Ref
+                return !hasOpenTrades;
+            });
+            
+            if (groupsToDisplay.length === 0) {
                 container.innerHTML = `
                     <div style="text-align: center; color: #666; padding: 40px; background: #111; border: 1px solid #333; border-radius: 8px;">
-                        No trade groups yet. Click "Create New Group" to group related trades.
+                        No completed trade groups yet. Groups will appear here when all positions in a trade chain are closed.
                     </div>
                 `;
                 return;
             }
 
-            container.innerHTML = tradeGroups.map((group, groupIndex) => {
+            container.innerHTML = groupsToDisplay.map((group) => {
+                // Find actual index in tradeGroups array
+                const actualGroupIndex = tradeGroups.findIndex(g => g.id === group.id);
+                
                 // Calculate total profit for the group
                 let totalProfit = 0;
                 if (!group.trades || !Array.isArray(group.trades)) {
@@ -2219,7 +2253,7 @@
                                     Profit: $${totalProfit.toFixed(2)} (${percentReturn}%)
                                 </div>
                                 <button class="btn-small" onclick="editGroup(${groupIndex})">Edit</button>
-                                <button class="btn-small danger" onclick="deleteGroup(${groupIndex})">Delete</button>
+                                <button class="btn-small danger" onclick="deleteGroup(${actualGroupIndex})">Delete</button>
                             </div>
                         </div>
                         <table>
@@ -2231,7 +2265,7 @@
                                     <th>Premium</th>
                                     <th>Action</th>
                                     <th>Type</th>
-                                    <th>Date <span style="cursor: pointer; user-select: none;" onclick="sortGroupTrades(${groupIndex}, 'dateOpened', 'asc')">▲</span><span style="cursor: pointer; user-select: none;" onclick="sortGroupTrades(${groupIndex}, 'dateOpened', 'desc')">▼</span></th>
+                                    <th>Date <span style="cursor: pointer; user-select: none;" onclick="sortGroupTrades(${actualGroupIndex}, 'dateOpened', 'asc')">▲</span><span style="cursor: pointer; user-select: none;" onclick="sortGroupTrades(${actualGroupIndex}, 'dateOpened', 'desc')">▼</span></th>
                                     <th>Exp Date</th>
                                     <th>Cash Required</th>
                                     <th>% Return</th>
@@ -2273,12 +2307,12 @@
                                             <td>${trade.account || '-'}</td>
                                             <td>
                                                 <div class="action-buttons">
-                                                    <button class="btn-small" onclick="editTradeFromGroup(${groupIndex}, ${tradeIndex})">Edit</button>
+                                                    <button class="btn-small" onclick="editTradeFromGroup(${actualGroupIndex}, ${tradeIndex})">Edit</button>
                                                     ${trade.status === 'open' ? `
-                                                        <button class="btn-small" style="background: #4488ff; color: #fff;" onclick="rollTradeFromGroup(${groupIndex}, ${tradeIndex})">Roll</button>
-                                                        <button class="btn-small success" onclick="closeTradeFromGroup(${groupIndex}, ${tradeIndex})">Close</button>
+                                                        <button class="btn-small" style="background: #4488ff; color: #fff;" onclick="rollTradeFromGroup(${actualGroupIndex}, ${tradeIndex})">Roll</button>
+                                                        <button class="btn-small success" onclick="closeTradeFromGroup(${actualGroupIndex}, ${tradeIndex})">Close</button>
                                                     ` : ''}
-                                                    <button class="btn-small danger" onclick="deleteTradeFromGroup(${groupIndex}, ${tradeIndex})">Delete</button>
+                                                    <button class="btn-small danger" onclick="deleteTradeFromGroup(${actualGroupIndex}, ${tradeIndex})">Delete</button>
                                                 </div>
                                             </td>
                                         </tr>
