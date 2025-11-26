@@ -4197,6 +4197,19 @@
                 const putPremium = stock.originalPut.premiumCollected;
                 const runningPL = putPremium + totalCallPremiums;
                 
+                // Build covered calls list
+                let callsList = '';
+                if (callsCount > 0) {
+                    callsList = stock.coveredCalls.map(call => `
+                        <div style="padding: 5px 0; border-bottom: 1px solid #333;">
+                            <strong>$${call.strike.toFixed(2)} Call</strong> - 
+                            Exp: ${formatDate(call.expDate)} - 
+                            <span style="color: #00ff88;">+$${call.premium.toFixed(2)}</span>
+                            ${call.notes ? `<br><span style="font-size: 0.8rem; color: #888;">${call.notes}</span>` : ''}
+                        </div>
+                    `).join('');
+                }
+                
                 return `
                     <tr>
                         <td>${makeSymbolClickable(stock.symbol, false)}</td>
@@ -4206,13 +4219,24 @@
                         <td><strong>$${stock.totalValue.toLocaleString()}</strong></td>
                         <td>${formatDate(stock.assignedDate)}</td>
                         <td>
-                            Strike: $${stock.originalPut.strike.toFixed(2)}<br>
-                            Premium: <span style="color: #00ff88;">+$${stock.originalPut.premiumCollected.toFixed(2)}</span><br>
-                            <span style="font-size: 0.8rem; color: #888;">Ref: ${stock.originalPut.tradeRef || '-'}</span>
+                            <div style="padding: 5px; background: #1a1a1a; border-radius: 4px; margin-bottom: 5px;">
+                                <strong style="color: #888;">Original PUT</strong><br>
+                                Strike: $${stock.originalPut.strike.toFixed(2)}<br>
+                                Premium: <span style="color: #00ff88;">+$${stock.originalPut.premiumCollected.toFixed(2)}</span><br>
+                                Opened: ${formatDate(stock.originalPut.dateOpened)}<br>
+                                <span style="font-size: 0.8rem; color: #888;">Ref: ${stock.originalPut.tradeRef || '-'}</span>
+                            </div>
                         </td>
                         <td>
-                            ${callsCount} call${callsCount !== 1 ? 's' : ''}<br>
-                            ${callsCount > 0 ? `<span style="color: #00ff88;">+$${totalCallPremiums.toFixed(2)}</span>` : '-'}
+                            <div style="max-height: 200px; overflow-y: auto;">
+                                ${callsCount > 0 ? `
+                                    <strong style="color: #4488ff;">${callsCount} Covered Call${callsCount !== 1 ? 's' : ''}</strong><br>
+                                    <strong style="color: #00ff88;">Total: +$${totalCallPremiums.toFixed(2)}</strong>
+                                    <div style="margin-top: 5px; font-size: 0.85rem;">
+                                        ${callsList}
+                                    </div>
+                                ` : '<span style="color: #666;">No calls yet</span>'}
+                            </div>
                         </td>
                         <td>${stock.account || '-'}</td>
                         <td>
@@ -4221,7 +4245,7 @@
                                 <button class="btn-small" style="background: #00ff88; color: #000;" onclick="calledAway(${index})">Called Away</button>
                                 <button class="btn-small danger" onclick="deleteStockPosition(${index})">Delete</button>
                             </div>
-                            <div style="margin-top: 5px; font-size: 0.85rem;">
+                            <div style="margin-top: 8px; font-size: 0.9rem; padding: 5px; background: #1a1a1a; border-radius: 4px;">
                                 <strong class="${runningPL >= 0 ? 'positive-value' : 'negative-value'}">
                                     Running P&L: ${runningPL >= 0 ? '+' : ''}$${runningPL.toFixed(2)}
                                 </strong>
