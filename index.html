@@ -836,6 +836,58 @@
                 </table>
             </div>
         </div>
+
+        <!-- Symbol Detail View -->
+        <div class="tab-content" id="symbolDetailTab" style="display: none;">
+            <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <h2 id="symbolDetailTitle" style="color: #00ff88; margin: 0;">Symbol Detail</h2>
+                <button onclick="closeSymbolDetail()" style="padding: 8px 16px; background: #333; color: #fff; border: none; border-radius: 4px; cursor: pointer;">← Back</button>
+            </div>
+            
+            <!-- All Trades Section with Filters -->
+            <div class="table-container">
+                <div class="table-header">
+                    <div class="table-title">All Trades</div>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="filterSymbolTrades('all')" id="symbolFilterAllBtn" style="padding: 6px 16px; background: #00ff88; color: #000; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer; font-weight: bold;">All Trades</button>
+                        <button onclick="filterSymbolTrades('open')" id="symbolFilterOpenBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Open Trades</button>
+                        <button onclick="filterSymbolTrades('closed')" id="symbolFilterClosedBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Closed Trades</button>
+                        <button onclick="filterSymbolTrades('rolled')" id="symbolFilterRolledBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Rolled Trades</button>
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Symbol</th>
+                            <th>Contracts</th>
+                            <th>Strike</th>
+                            <th>Premium</th>
+                            <th>Action</th>
+                            <th>Type</th>
+                            <th>Date Opened</th>
+                            <th>Date Closed</th>
+                            <th>Exp Date</th>
+                            <th>Cash Required</th>
+                            <th>Return %</th>
+                            <th>P&L</th>
+                            <th>Info</th>
+                            <th>Trade Ref #</th>
+                            <th>Account</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="symbolTradesBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Closed Groups Section -->
+            <div style="margin-top: 30px;">
+                <h3 style="color: #00ff88; margin-bottom: 15px;">Closed Groups</h3>
+                <div id="symbolGroupsList"></div>
+            </div>
+        </div>
     </div>
 
     <div class="modal" id="closeModal">
@@ -1315,6 +1367,16 @@
         let expirationTradesSortField = 'dateOpened';
         let expirationTradesSortOrder = 'desc'; // Changed to match other tables
         
+        // Symbol detail view state
+        let currentSymbol = '';
+        let symbolTradesFilter = 'all'; // 'all', 'open', 'closed', 'rolled'
+        
+        // Helper function to make symbol clickable
+        function makeSymbolClickable(symbol, hasRolledBadge = false) {
+            const rolledBadge = hasRolledBadge ? '<span class="rolled-badge">Rolled</span>' : '';
+            return `<strong style="cursor: pointer; text-decoration: underline; color: #00ff88;" onclick="showSymbolDetail('${symbol}')">${symbol}</strong>${rolledBadge}`;
+        }
+        
         // Undo functionality
         let lastDeletedTrade = null;
         let lastDeletedFrom = null; // 'open', 'closed', or 'group'
@@ -1695,7 +1757,7 @@
 
                 return `
                     <tr>
-                        <td><strong>${trade.symbol}</strong>${trade.isRolled ? '<span class="rolled-badge">Rolled</span>' : ''}</td>
+                        <td>${makeSymbolClickable(trade.symbol, trade.isRolled)}</td>
                         <td>${trade.contracts}</td>
                         <td>$${trade.strike.toFixed(2)}</td>
                         <td>$${trade.premium.toFixed(2)}</td>
@@ -1794,7 +1856,7 @@
 
                 return `
                     <tr>
-                        <td><strong>${trade.symbol}</strong>${trade.isRolled ? '<span class="rolled-badge">Rolled</span>' : ''}</td>
+                        <td>${makeSymbolClickable(trade.symbol, trade.isRolled)}</td>
                         <td>${trade.contracts}</td>
                         <td>$${trade.strike.toFixed(2)}</td>
                         <td>$${trade.premium.toFixed(2)}</td>
@@ -2133,6 +2195,252 @@
             document.getElementById('filterRolledBtn').style.color = filterType === 'rolled' ? '#000' : '#fff';
             
             renderAllTrades();
+        }
+
+        function showSymbolDetail(symbol) {
+            currentSymbol = symbol;
+            symbolTradesFilter = 'all';
+            
+            // Hide all other tabs
+            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+            
+            // Show symbol detail tab
+            document.getElementById('symbolDetailTab').style.display = 'block';
+            document.getElementById('symbolDetailTitle').textContent = `${symbol} - All Trades`;
+            
+            // Render the symbol trades
+            renderSymbolTrades();
+            renderSymbolGroups();
+        }
+
+        function closeSymbolDetail() {
+            document.getElementById('symbolDetailTab').style.display = 'none';
+            document.getElementById(currentTab + 'Tab').classList.add('active');
+            document.getElementById(currentTab + 'Tab').style.display = 'block';
+        }
+
+        function filterSymbolTrades(filterType) {
+            symbolTradesFilter = filterType;
+            
+            // Update button styles
+            document.getElementById('symbolFilterAllBtn').style.background = filterType === 'all' ? '#00ff88' : '#333';
+            document.getElementById('symbolFilterAllBtn').style.color = filterType === 'all' ? '#000' : '#fff';
+            document.getElementById('symbolFilterOpenBtn').style.background = filterType === 'open' ? '#00ff88' : '#333';
+            document.getElementById('symbolFilterOpenBtn').style.color = filterType === 'open' ? '#000' : '#fff';
+            document.getElementById('symbolFilterClosedBtn').style.background = filterType === 'closed' ? '#00ff88' : '#333';
+            document.getElementById('symbolFilterClosedBtn').style.color = filterType === 'closed' ? '#000' : '#fff';
+            document.getElementById('symbolFilterRolledBtn').style.background = filterType === 'rolled' ? '#00ff88' : '#333';
+            document.getElementById('symbolFilterRolledBtn').style.color = filterType === 'rolled' ? '#000' : '#fff';
+            
+            renderSymbolTrades();
+        }
+
+        function renderSymbolTrades() {
+            const tbody = document.getElementById('symbolTradesBody');
+            if (!tbody) return;
+            
+            // Get all trades for this symbol
+            const openTrades = trades.filter(t => t.symbol === currentSymbol).map(t => ({...t, isOpen: true}));
+            const closedTradesArray = closedTrades.filter(t => t.symbol === currentSymbol).map(t => ({...t, isOpen: false}));
+            
+            // Get trades from groups
+            const includedIds = new Set();
+            openTrades.forEach(t => { if (t.id) includedIds.add(t.id); });
+            closedTradesArray.forEach(t => { if (t.id) includedIds.add(t.id); });
+            
+            const groupTrades = [];
+            tradeGroups.forEach(group => {
+                if (group.trades && Array.isArray(group.trades)) {
+                    group.trades.forEach(trade => {
+                        if (trade.symbol !== currentSymbol) return;
+                        
+                        if (trade.id && includedIds.has(trade.id)) return;
+                        
+                        const alreadyExists = openTrades.some(t => 
+                            t.symbol === trade.symbol && 
+                            t.dateOpened === trade.dateOpened && 
+                            t.strike === trade.strike &&
+                            t.premium === trade.premium &&
+                            t.action === trade.action
+                        ) || closedTradesArray.some(t => 
+                            t.symbol === trade.symbol && 
+                            t.dateOpened === trade.dateOpened && 
+                            t.strike === trade.strike &&
+                            t.premium === trade.premium &&
+                            t.action === trade.action
+                        );
+                        
+                        if (!alreadyExists) {
+                            if (trade.id) includedIds.add(trade.id);
+                            groupTrades.push({...trade, isOpen: trade.status === 'open'});
+                        }
+                    });
+                }
+            });
+            
+            let allTrades = [...openTrades, ...closedTradesArray, ...groupTrades];
+            
+            // Apply filter
+            let filteredTrades = allTrades;
+            if (symbolTradesFilter === 'open') {
+                filteredTrades = allTrades.filter(t => t.isOpen);
+            } else if (symbolTradesFilter === 'closed') {
+                filteredTrades = allTrades.filter(t => !t.isOpen);
+            } else if (symbolTradesFilter === 'rolled') {
+                const rolledTradeRefs = new Set();
+                allTrades.forEach(t => {
+                    if (t.isRolled && t.tradeRef && t.tradeRef.trim()) {
+                        rolledTradeRefs.add(t.tradeRef);
+                    }
+                });
+                
+                filteredTrades = allTrades.filter(t => {
+                    if (t.isRolled) return true;
+                    if (t.tradeRef && t.tradeRef.trim() && rolledTradeRefs.has(t.tradeRef)) {
+                        return true;
+                    }
+                    return false;
+                });
+            }
+            
+            if (filteredTrades.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="17" style="text-align: center; color: #666; padding: 40px;">
+                            No trades found for this filter.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Sort by dateOpened desc
+            filteredTrades.sort((a, b) => new Date(b.dateOpened) - new Date(a.dateOpened));
+            
+            // Render trades
+            tbody.innerHTML = filteredTrades.map(trade => {
+                const cashRequired = calculateCashRequired(trade);
+                const returnPercent = calculateReturnPercent(trade);
+                const pl = calculatePL(trade);
+                const statusBadge = trade.isOpen ? 
+                    '<span class="status-badge open">OPEN</span>' : 
+                    '<span class="status-badge closed">CLOSED</span>';
+
+                return `
+                    <tr>
+                        <td>${statusBadge}</td>
+                        <td><strong>${trade.symbol}</strong>${trade.isRolled ? '<span class="rolled-badge">Rolled</span>' : ''}</td>
+                        <td>${trade.contracts}</td>
+                        <td>$${trade.strike.toFixed(2)}</td>
+                        <td>$${trade.premium.toFixed(2)}</td>
+                        <td><span class="action-badge ${trade.action}">${trade.action.toUpperCase()}</span></td>
+                        <td><span class="type-badge ${trade.type}">${trade.type.toUpperCase()}</span></td>
+                        <td>${formatDate(trade.dateOpened)}</td>
+                        <td>${trade.dateClosed ? formatDate(trade.dateClosed) : '-'}</td>
+                        <td>${formatDate(trade.expDate)}</td>
+                        <td>${cashRequired > 0 ? '$' + cashRequired.toLocaleString() : '-'}</td>
+                        <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
+                        <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${trade.closingNotes || trade.info || '-'}</td>
+                        <td style="color: #00ff88;"><strong>${trade.tradeRef || '-'}</strong></td>
+                        <td>${trade.account || '-'}</td>
+                        <td>-</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderSymbolGroups() {
+            const container = document.getElementById('symbolGroupsList');
+            if (!container) return;
+            
+            // Filter groups that have trades with this symbol and are fully closed
+            const symbolGroups = tradeGroups.filter(group => {
+                if (!group.trades || !Array.isArray(group.trades)) return false;
+                
+                // Check if group has this symbol
+                const hasSymbol = group.trades.some(t => t.symbol === currentSymbol);
+                if (!hasSymbol) return false;
+                
+                // Check if all trades with this symbol are closed
+                const symbolTrades = group.trades.filter(t => t.symbol === currentSymbol);
+                const hasOpenTrades = symbolTrades.some(t => t.status === 'open');
+                
+                return !hasOpenTrades;
+            });
+            
+            if (symbolGroups.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 40px; background: #111; border: 1px solid #333; border-radius: 8px;">
+                        No completed groups for ${currentSymbol} yet.
+                    </div>
+                `;
+                return;
+            }
+            
+            // Render groups (same as renderGroups but filtered)
+            container.innerHTML = symbolGroups.map(group => {
+                let totalProfit = 0;
+                const symbolTradesInGroup = group.trades.filter(t => t.symbol === currentSymbol);
+                
+                symbolTradesInGroup.forEach(trade => {
+                    const amount = trade.premium * trade.contracts * 100;
+                    if (trade.action === 'sell') {
+                        totalProfit += amount;
+                    } else {
+                        totalProfit -= amount;
+                    }
+                });
+
+                const cashRequired = symbolTradesInGroup[0].strike * symbolTradesInGroup[0].contracts * 100;
+                const percentReturn = ((totalProfit / cashRequired) * 100).toFixed(2);
+
+                return `
+                    <div class="table-container" style="margin-bottom: 20px;">
+                        <div class="table-header">
+                            <div class="table-title">${group.name}</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: ${totalProfit >= 0 ? '#00ff88' : '#ff4444'};">
+                                Profit: $${totalProfit.toFixed(2)} (${percentReturn}%)
+                            </div>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Contracts</th>
+                                    <th>Strike</th>
+                                    <th>Premium</th>
+                                    <th>Action</th>
+                                    <th>Type</th>
+                                    <th>Date Opened</th>
+                                    <th>Exp Date</th>
+                                    <th>P&L</th>
+                                    <th>Info</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${symbolTradesInGroup.map(trade => {
+                                    const pl = calculatePL(trade);
+                                    return `
+                                        <tr>
+                                            <td><strong>${trade.symbol}</strong>${trade.isRolled ? '<span class="rolled-badge">Rolled</span>' : ''}</td>
+                                            <td>${trade.contracts}</td>
+                                            <td>$${trade.strike.toFixed(2)}</td>
+                                            <td>$${trade.premium.toFixed(2)}</td>
+                                            <td><span class="action-badge ${trade.action}">${trade.action.toUpperCase()}</span></td>
+                                            <td><span class="type-badge ${trade.type}">${trade.type.toUpperCase()}</span></td>
+                                            <td>${formatDate(trade.dateOpened)}</td>
+                                            <td>${formatDate(trade.expDate)}</td>
+                                            <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                                            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${trade.info || '-'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }).join('');
         }
 
         function renderAllTrades() {
