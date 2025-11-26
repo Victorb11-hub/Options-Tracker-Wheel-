@@ -491,6 +491,18 @@
             background: #cc0000;
         }
 
+        .rolled-badge {
+            display: inline-block;
+            background: #4488ff;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
         .hidden {
             display: none;
         }
@@ -781,6 +793,12 @@
             <div class="table-container">
                 <div class="table-header">
                     <div class="table-title">All Trades (Open & Closed)</div>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="filterAllTrades('all')" id="filterAllBtn" style="padding: 6px 16px; background: #00ff88; color: #000; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer; font-weight: bold;">All Trades</button>
+                        <button onclick="filterAllTrades('open')" id="filterOpenBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Open Trades</button>
+                        <button onclick="filterAllTrades('closed')" id="filterClosedBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Closed Trades</button>
+                        <button onclick="filterAllTrades('rolled')" id="filterRolledBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Rolled Trades</button>
+                    </div>
                 </div>
                 <table>
                     <thead>
@@ -1168,6 +1186,7 @@
         let openTradesSortOrder = 'desc'; // 'asc' or 'desc'
         let allTradesSortField = 'dateOpened';
         let allTradesSortOrder = 'desc';
+        let allTradesFilter = 'all'; // 'all', 'open', 'closed', 'rolled'
         let groupsSortField = 'dateOpened';
         let groupsSortOrder = 'desc';
         let filteredTradesSortField = 'dateOpened';
@@ -1475,7 +1494,7 @@
 
                 return `
                     <tr>
-                        <td><strong>${trade.symbol}</strong></td>
+                        <td><strong>${trade.symbol}</strong>${trade.isRolled ? '<span class="rolled-badge">Rolled</span>' : ''}</td>
                         <td>${trade.contracts}</td>
                         <td>$${trade.strike.toFixed(2)}</td>
                         <td>$${trade.premium.toFixed(2)}</td>
@@ -1574,7 +1593,7 @@
 
                 return `
                     <tr>
-                        <td><strong>${trade.symbol}</strong></td>
+                        <td><strong>${trade.symbol}</strong>${trade.isRolled ? '<span class="rolled-badge">Rolled</span>' : ''}</td>
                         <td>${trade.contracts}</td>
                         <td>$${trade.strike.toFixed(2)}</td>
                         <td>$${trade.premium.toFixed(2)}</td>
@@ -1665,7 +1684,7 @@
                 // Current open position row
                 html += `
                     <tr style="background: #0a0a0a;">
-                        <td><strong>${trade.symbol}</strong></td>
+                        <td><strong>${trade.symbol}</strong>${trade.isRolled ? '<span class="rolled-badge">Rolled</span>' : ''}</td>
                         <td>${trade.contracts}</td>
                         <td>$${trade.strike.toFixed(2)}</td>
                         <td>$${trade.premium.toFixed(2)}</td>
@@ -1899,6 +1918,22 @@
             renderAllTrades();
         }
 
+        function filterAllTrades(filterType) {
+            allTradesFilter = filterType;
+            
+            // Update button styles
+            document.getElementById('filterAllBtn').style.background = filterType === 'all' ? '#00ff88' : '#333';
+            document.getElementById('filterAllBtn').style.color = filterType === 'all' ? '#000' : '#fff';
+            document.getElementById('filterOpenBtn').style.background = filterType === 'open' ? '#00ff88' : '#333';
+            document.getElementById('filterOpenBtn').style.color = filterType === 'open' ? '#000' : '#fff';
+            document.getElementById('filterClosedBtn').style.background = filterType === 'closed' ? '#00ff88' : '#333';
+            document.getElementById('filterClosedBtn').style.color = filterType === 'closed' ? '#000' : '#fff';
+            document.getElementById('filterRolledBtn').style.background = filterType === 'rolled' ? '#00ff88' : '#333';
+            document.getElementById('filterRolledBtn').style.color = filterType === 'rolled' ? '#000' : '#fff';
+            
+            renderAllTrades();
+        }
+
         function renderAllTrades() {
             const tbody = document.getElementById('allTradesTableBody');
             if (!tbody) return; // Exit if element doesn't exist yet
@@ -1942,11 +1977,21 @@
             console.log('renderAllTrades - Total allTrades:', allTrades.length);
             console.log('All trades data:', allTrades);
             
-            if (allTrades.length === 0) {
+            // Apply filter
+            let filteredTrades = allTrades;
+            if (allTradesFilter === 'open') {
+                filteredTrades = allTrades.filter(t => t.isOpen);
+            } else if (allTradesFilter === 'closed') {
+                filteredTrades = allTrades.filter(t => !t.isOpen);
+            } else if (allTradesFilter === 'rolled') {
+                filteredTrades = allTrades.filter(t => t.isRolled);
+            }
+            
+            if (filteredTrades.length === 0) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="17" style="text-align: center; color: #666; padding: 40px;">
-                            No trades yet.
+                            No trades found for this filter.
                         </td>
                     </tr>
                 `;
@@ -1954,7 +1999,7 @@
             }
 
             // Sort by the selected field and order
-            allTrades.sort((a, b) => {
+            filteredTrades.sort((a, b) => {
                 let aValue, bValue;
                 
                 if (allTradesSortField === 'dateClosed') {
@@ -1973,7 +2018,7 @@
                 }
             });
 
-            tbody.innerHTML = allTrades.map((trade, index) => {
+            tbody.innerHTML = filteredTrades.map((trade, index) => {
                 const cashRequired = calculateCashRequired(trade);
                 const returnPercent = calculateReturnPercent(trade);
                 const pl = calculatePL(trade);
@@ -1984,7 +2029,7 @@
                 return `
                     <tr>
                         <td>${statusBadge}</td>
-                        <td><strong>${trade.symbol}</strong></td>
+                        <td><strong>${trade.symbol}</strong>${trade.isRolled ? '<span class="rolled-badge">Rolled</span>' : ''}</td>
                         <td>${trade.contracts}</td>
                         <td>$${trade.strike.toFixed(2)}</td>
                         <td>$${trade.premium.toFixed(2)}</td>
@@ -2780,7 +2825,8 @@
                     expDate: rollNewExpDate,
                     priceAtAction: rollPriceAtAction,
                     info: rollNotes ? `Rolled: ${rollNotes}` : 'Rolled - new leg',
-                    status: 'open'
+                    status: 'open',
+                    isRolled: true // Mark this position as rolled
                 };
                 
                 // Move original and closing to closed trades
