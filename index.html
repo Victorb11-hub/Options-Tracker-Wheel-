@@ -2102,10 +2102,21 @@
             
             // Also get trades from groups that might not be in closedTrades
             const groupTrades = [];
+            const seenIds = new Set();
+            
+            // Track IDs from open and closed trades
+            openTrades.forEach(t => { if (t.id) seenIds.add(t.id); });
+            closedTradesArray.forEach(t => { if (t.id) seenIds.add(t.id); });
+            
             tradeGroups.forEach(group => {
                 if (group.trades && Array.isArray(group.trades)) {
                     group.trades.forEach(trade => {
-                        // Check if this trade is already in openTrades or closedTrades
+                        // Primary deduplication: Check by ID
+                        if (trade.id && seenIds.has(trade.id)) {
+                            return; // Skip - this exact trade already exists
+                        }
+                        
+                        // Fallback deduplication: Check by fields (for old trades without IDs)
                         const alreadyExists = openTrades.some(t => 
                             t.symbol === trade.symbol && 
                             t.dateOpened === trade.dateOpened && 
@@ -2121,6 +2132,7 @@
                         );
                         
                         if (!alreadyExists) {
+                            if (trade.id) seenIds.add(trade.id); // Track this ID
                             groupTrades.push({...trade, isOpen: trade.status === 'open'});
                         }
                     });
