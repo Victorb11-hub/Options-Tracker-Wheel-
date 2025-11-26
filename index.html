@@ -2205,7 +2205,95 @@
                 }
             });
 
-            tbody.innerHTML = filteredTrades.map((trade, index) => {
+            // Special handling for Rolled Trades filter - group by Trade Ref #
+            if (allTradesFilter === 'rolled') {
+                // Group trades by Trade Ref #
+                const groupedByRef = {};
+                filteredTrades.forEach(trade => {
+                    const ref = trade.tradeRef || 'No Trade Ref';
+                    if (!groupedByRef[ref]) {
+                        groupedByRef[ref] = [];
+                    }
+                    groupedByRef[ref].push(trade);
+                });
+
+                // Render grouped
+                let html = '';
+                Object.keys(groupedByRef).forEach(ref => {
+                    const tradesInRef = groupedByRef[ref];
+                    
+                    // Calculate total P&L for this ref group
+                    let totalPL = 0;
+                    tradesInRef.forEach(t => {
+                        totalPL += calculatePL(t);
+                    });
+                    
+                    // Add group header
+                    html += `
+                        <tr style="background: #1a1a1a; font-weight: bold; border-top: 2px solid #00ff88;">
+                            <td colspan="12" style="padding: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="color: #00ff88; font-size: 1.1rem;">Trade Ref: ${ref}</span>
+                                    <span class="${totalPL >= 0 ? 'positive-value' : 'negative-value'}" style="font-size: 1.1rem;">
+                                        Total P&L: $${totalPL.toFixed(2)}
+                                    </span>
+                                </div>
+                            </td>
+                            <td colspan="5"></td>
+                        </tr>
+                    `;
+                    
+                    // Add trades in this group
+                    tradesInRef.forEach(trade => {
+                        const cashRequired = calculateCashRequired(trade);
+                        const returnPercent = calculateReturnPercent(trade);
+                        const pl = calculatePL(trade);
+                        const statusBadge = trade.isOpen ? 
+                            '<span class="status-badge open">OPEN</span>' : 
+                            '<span class="status-badge closed">CLOSED</span>';
+
+                        html += `
+                            <tr>
+                                <td>${statusBadge}</td>
+                                <td><strong>${trade.symbol}</strong>${trade.isRolled ? '<span class="rolled-badge">Rolled</span>' : ''}</td>
+                                <td>${trade.contracts}</td>
+                                <td>$${trade.strike.toFixed(2)}</td>
+                                <td>$${trade.premium.toFixed(2)}</td>
+                                <td><span class="action-badge ${trade.action}">${trade.action.toUpperCase()}</span></td>
+                                <td><span class="type-badge ${trade.type}">${trade.type.toUpperCase()}</span></td>
+                                <td>${formatDate(trade.dateOpened)}</td>
+                                <td>${trade.dateClosed ? formatDate(trade.dateClosed) : '-'}</td>
+                                <td>${formatDate(trade.expDate)}</td>
+                                <td>${cashRequired > 0 ? '$' + cashRequired.toLocaleString() : '-'}</td>
+                                <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
+                                <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${trade.closingNotes || trade.info || '-'}</td>
+                                <td style="color: #00ff88;"><strong>${trade.tradeRef || '-'}</strong></td>
+                                <td>${trade.account || '-'}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        ${trade.isOpen ? `
+                                            <button class="btn-small" onclick="editTradeFromAll(${filteredTrades.indexOf(trade)})">Edit</button>
+                                            <button class="btn-small" style="background: #4488ff; color: #fff;" onclick="rollTradeFromAll(${filteredTrades.indexOf(trade)})">Roll</button>
+                                            <button class="btn-small success" onclick="closeTradeFromAll(${filteredTrades.indexOf(trade)})">Close</button>
+                                        ` : `
+                                            <button class="btn-small" onclick="editTradeFromAll(${filteredTrades.indexOf(trade)})">Edit</button>
+                                        `}
+                                        <button class="btn-small danger" onclick="deleteTradeFromAll(${filteredTrades.indexOf(trade)})">Delete</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    // Add spacing between groups
+                    html += `<tr style="height: 20px;"><td colspan="17"></td></tr>`;
+                });
+                
+                tbody.innerHTML = html;
+            } else {
+                // Normal rendering for other filters
+                tbody.innerHTML = filteredTrades.map((trade, index) => {
                 const cashRequired = calculateCashRequired(trade);
                 const returnPercent = calculateReturnPercent(trade);
                 const pl = calculatePL(trade);
@@ -2244,6 +2332,7 @@
                     </tr>
                 `;
             }).join('');
+            }
         }
 
         function sortGroupTrades(groupIndex, field, order) {
