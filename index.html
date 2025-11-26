@@ -2741,11 +2741,22 @@
                 const symbolTradesInGroup = group.trades.filter(t => t.symbol === currentSymbol);
                 
                 symbolTradesInGroup.forEach(trade => {
-                    const amount = trade.premium * trade.contracts * 100;
-                    if (trade.action === 'sell') {
-                        totalProfit += amount;
-                    } else {
-                        totalProfit -= amount;
+                    // For CALLED AWAY trades, use the stock profit from cycleDetails
+                    if (trade.isCalledAway && trade.cycleDetails) {
+                        totalProfit += trade.cycleDetails.stockProfit;
+                    } 
+                    // For ASSIGNMENT trades, no P&L (already counted in PUT)
+                    else if (trade.isAssignment) {
+                        // Skip - no P&L for assignment itself
+                    }
+                    // For regular option trades
+                    else {
+                        const amount = trade.premium * trade.contracts * 100;
+                        if (trade.action === 'sell') {
+                            totalProfit += amount;
+                        } else {
+                            totalProfit -= amount;
+                        }
                     }
                 });
 
@@ -3147,11 +3158,22 @@
                 }
                 
                 group.trades.forEach(trade => {
-                    const amount = trade.premium * trade.contracts * 100;
-                    if (trade.action === 'sell') {
-                        totalProfit += amount;
-                    } else {
-                        totalProfit -= amount;
+                    // For CALLED AWAY trades, use the stock profit from cycleDetails
+                    if (trade.isCalledAway && trade.cycleDetails) {
+                        totalProfit += trade.cycleDetails.stockProfit;
+                    } 
+                    // For ASSIGNMENT trades, no P&L (already counted in PUT)
+                    else if (trade.isAssignment) {
+                        // Skip - no P&L for assignment itself
+                    }
+                    // For regular option trades
+                    else {
+                        const amount = trade.premium * trade.contracts * 100;
+                        if (trade.action === 'sell') {
+                            totalProfit += amount;
+                        } else {
+                            totalProfit -= amount;
+                        }
                     }
                 });
 
@@ -3220,7 +3242,10 @@
                                             <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
                                             <td>$${(trade.priceAtAction || 0).toFixed(2)}</td>
                                             <td class="${parseFloat(otm) >= 0 ? 'positive-value' : 'negative-value'}">${otm}%</td>
-                                            <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                                            <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">
+                                                $${pl.toFixed(2)}
+                                                ${trade.isCalledAway && trade.cycleDetails ? `<br><span style="font-size: 0.8rem; color: #888;">Stock Profit: ${trade.cycleDetails.stockProfit >= 0 ? '+' : ''}$${trade.cycleDetails.stockProfit.toFixed(2)}</span>` : ''}
+                                            </td>
                                             <td>${trade.info || '-'}</td>
                                             <td style="color: #00ff88;"><strong>${trade.tradeRef || '-'}</strong></td>
                                             <td>${trade.account || '-'}</td>
