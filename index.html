@@ -4175,7 +4175,8 @@
                 return;
             }
             
-            const premiumTotal = premium * stock.shares / 100;
+            const contracts = stock.shares / 100;
+            const premiumTotal = premium * contracts * 100;
             
             // Add to stock's covered calls array
             const call = {
