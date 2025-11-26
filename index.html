@@ -3995,11 +3995,11 @@
             
             // Save and render
             saveData();
+            closeSellCallModal();
             renderTables();
             updateStats();
-            closeSellCallModal();
             
-            alert(`Sold ${stock.shares / 100} call contract(s) at $${strike.toFixed(2)} for $${premiumTotal.toFixed(2)} premium!`);
+            alert(`✅ Covered Call Sold!\n\nSold ${stock.shares / 100} call contract(s) at $${strike.toFixed(2)}\nPremium collected: $${premiumTotal.toFixed(2)}\n\nRunning P&L updated in Stock Positions!`);
         }
 
         function confirmAssign() {
@@ -4213,9 +4213,9 @@
             
             // Save and render
             saveData();
+            closeCalledAwayModal();
             renderStockPositions();
             updateStats();
-            closeCalledAwayModal();
             
             alert(`✅ Stock Called Away!\n\n` +
                   `Symbol: ${stock.symbol}\n` +
@@ -4225,7 +4225,8 @@
                   `Put Premium: +$${putPremium.toFixed(2)}\n` +
                   `Call Premiums: +$${callPremiums.toFixed(2)}\n` +
                   `Stock Profit: ${stockProfit >= 0 ? '+' : ''}$${stockProfit.toFixed(2)}\n\n` +
-                  `💰 Total P&L: ${totalPL >= 0 ? '+' : ''}$${totalPL.toFixed(2)}`);
+                  `💰 Total Wheel Cycle P&L: ${totalPL >= 0 ? '+' : ''}$${totalPL.toFixed(2)}\n\n` +
+                  `Check All Trades > Assigned filter to see complete cycle!`);
         }
 
         function deleteStockPosition(index) {
