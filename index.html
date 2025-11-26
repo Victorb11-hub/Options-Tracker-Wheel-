@@ -1314,6 +1314,7 @@
             
             renderOpenTrades();
             renderAllTrades();
+            renderStockPositions();
             updateStats();
         }
 
@@ -3481,24 +3482,30 @@
         }
 
         function updateStats() {
-            let totalCollateral = 0;
-            let totalPremium = 0;
-            let totalPL = 0;
-            let totalReturns = 0;
+            try {
+                let totalCollateral = 0;
+                let totalPremium = 0;
+                let totalPL = 0;
+                let totalReturns = 0;
 
-            trades.forEach(trade => {
-                const cashReq = calculateCashRequired(trade);
-                totalCollateral += cashReq;
-                
-                const premium = trade.premium * trade.contracts * 100;
-                if (trade.action === 'sell') {
-                    totalPremium += premium;
-                }
-                totalPL += calculatePL(trade);
-                totalReturns += parseFloat(calculateReturnPercent(trade));
-            });
+                trades.forEach(trade => {
+                    const cashReq = calculateCashRequired(trade);
+                    totalCollateral += cashReq;
+                    
+                    const premium = trade.premium * trade.contracts * 100;
+                    if (trade.action === 'sell') {
+                        totalPremium += premium;
+                    }
+                    totalPL += calculatePL(trade);
+                    totalReturns += parseFloat(calculateReturnPercent(trade));
+                });
 
             closedTrades.forEach(trade => {
+                // Skip trades without required fields
+                if (!trade.contracts || trade.premium === undefined) {
+                    return;
+                }
+                
                 const premium = trade.premium * trade.contracts * 100;
                 if (trade.action === 'sell') {
                     totalPremium += premium;
@@ -3546,6 +3553,12 @@
             document.getElementById('openPositions').textContent = trades.length;
             document.getElementById('avgReturn').textContent = `${avgReturn}%`;
             document.getElementById('closedPositions').textContent = tradeGroups.length; // Show number of closed groups
+            } catch (error) {
+                console.error('Error in updateStats:', error);
+                console.log('trades:', trades);
+                console.log('closedTrades:', closedTrades);
+                console.log('stockPositions:', stockPositions);
+            }
         }
 
         function formatDate(dateString) {
