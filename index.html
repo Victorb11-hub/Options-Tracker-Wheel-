@@ -1008,6 +1008,33 @@
         </div>
     </div>
 
+    <div class="modal" id="calledAwayModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Stock Called Away</div>
+                <button class="close-btn" onclick="closeCalledAwayModal()">×</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Called Away Date</label>
+                    <input type="date" id="calledAwayDate">
+                </div>
+                <div class="form-group">
+                    <label>Sale Price (per share)</label>
+                    <input type="number" id="salePrice" placeholder="900.00" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <input type="text" id="calledAwayNotes" placeholder="Stock called away">
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="success" onclick="confirmCalledAway()">Called Away</button>
+                <button class="secondary" onclick="closeCalledAwayModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal" id="rollModal">
         <div class="modal-content" style="max-width: 800px;">
             <div class="modal-header">
@@ -2798,7 +2825,7 @@
                         html += `
                             <tr>
                                 <td>${statusBadge}</td>
-                                <td>${makeSymbolClickable(trade.symbol, trade.isRolled)}</td>
+                                <td>${makeSymbolClickable(trade.symbol, trade.isRolled)}${trade.isAssignment ? '<span style="background: #ff8844; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 5px;">ASSIGNED</span>' : ''}${trade.isCalledAway ? '<span style="background: #00ff88; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 5px;">CALLED AWAY</span>' : ''}</td>
                                 <td>${trade.contracts}</td>
                                 <td>$${trade.strike.toFixed(2)}</td>
                                 <td>$${trade.premium.toFixed(2)}</td>
@@ -2847,7 +2874,7 @@
                 return `
                     <tr>
                         <td>${statusBadge}</td>
-                        <td>${makeSymbolClickable(trade.symbol, trade.isRolled)}</td>
+                        <td>${makeSymbolClickable(trade.symbol, trade.isRolled)}${trade.isAssignment ? '<span style="background: #ff8844; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 5px;">ASSIGNED</span>' : ''}${trade.isCalledAway ? '<span style="background: #00ff88; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 5px;">CALLED AWAY</span>' : ''}</td>
                         <td>${trade.contracts}</td>
                         <td>$${trade.strike.toFixed(2)}</td>
                         <td>$${trade.premium.toFixed(2)}</td>
@@ -3907,14 +3934,23 @@
         }
 
         function confirmSellCall() {
-            if (sellingCallForStock < 0) return;
+            console.log('confirmSellCall called, sellingCallForStock:', sellingCallForStock);
+            
+            if (sellingCallForStock < 0) {
+                console.log('No stock selected');
+                return;
+            }
             
             const stock = stockPositions[sellingCallForStock];
+            console.log('Stock:', stock);
+            
             const strike = parseFloat(document.getElementById('callStrike').value);
             const premium = parseFloat(document.getElementById('callPremium').value);
             const expDate = document.getElementById('callExpDate').value;
             const dateOpened = document.getElementById('callDateOpened').value;
             const notes = document.getElementById('callNotes').value;
+            
+            console.log('Values:', {strike, premium, expDate, dateOpened, notes});
             
             if (!strike || !premium || !expDate || !dateOpened) {
                 alert('Please fill in all required fields');
@@ -3934,6 +3970,7 @@
                 notes: notes
             };
             stock.coveredCalls.push(call);
+            console.log('Added call to stock:', call);
             
             // Create call trade for All Trades tracking
             const callTrade = {
@@ -3954,6 +3991,7 @@
                 linkedStockId: stock.id
             };
             trades.push(callTrade);
+            console.log('Added call trade:', callTrade);
             
             // Save and render
             saveData();
@@ -4102,19 +4140,38 @@
             }).join('');
         }
 
+        let callingAwayStock = -1;
+
         function calledAway(index) {
+            callingAwayStock = index;
             const stock = stockPositions[index];
             
-            const salePrice = prompt(`Enter sale price per share for ${stock.symbol}:`, stock.costBasis);
-            if (!salePrice) return;
+            // Pre-fill modal
+            document.getElementById('calledAwayDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('salePrice').value = stock.costBasis;
+            document.getElementById('calledAwayNotes').value = '';
             
-            const salePriceNum = parseFloat(salePrice);
-            if (isNaN(salePriceNum) || salePriceNum <= 0) {
-                alert('Invalid sale price');
+            // Show modal
+            document.getElementById('calledAwayModal').style.display = 'flex';
+        }
+
+        function closeCalledAwayModal() {
+            document.getElementById('calledAwayModal').style.display = 'none';
+            callingAwayStock = -1;
+        }
+
+        function confirmCalledAway() {
+            if (callingAwayStock < 0) return;
+            
+            const stock = stockPositions[callingAwayStock];
+            const calledAwayDate = document.getElementById('calledAwayDate').value;
+            const salePriceNum = parseFloat(document.getElementById('salePrice').value);
+            const notes = document.getElementById('calledAwayNotes').value;
+            
+            if (!calledAwayDate || !salePriceNum || salePriceNum <= 0) {
+                alert('Please enter valid date and sale price');
                 return;
             }
-            
-            const today = new Date().toISOString().split('T')[0];
             
             // Calculate full cycle P&L
             const putPremium = stock.originalPut.premiumCollected;
@@ -4132,13 +4189,13 @@
                 shares: stock.shares,
                 strike: salePriceNum,
                 premium: 0,
-                dateOpened: today,
-                expDate: today,
+                dateOpened: calledAwayDate,
+                expDate: calledAwayDate,
                 tradeRef: stock.tradeRef,
                 account: stock.account,
-                info: `Called away at $${salePriceNum.toFixed(2)} - Total P&L: $${totalPL.toFixed(2)}`,
+                info: notes || `Called away at $${salePriceNum.toFixed(2)} - Total P&L: $${totalPL.toFixed(2)}`,
                 status: 'closed',
-                dateClosed: today,
+                dateClosed: calledAwayDate,
                 isCalledAway: true,
                 fullCyclePL: totalPL,
                 cycleDetails: {
@@ -4152,12 +4209,13 @@
             closedTrades.push(calledAwayTrade);
             
             // Remove from active positions
-            stockPositions.splice(index, 1);
+            stockPositions.splice(callingAwayStock, 1);
             
             // Save and render
             saveData();
             renderStockPositions();
             updateStats();
+            closeCalledAwayModal();
             
             alert(`✅ Stock Called Away!\n\n` +
                   `Symbol: ${stock.symbol}\n` +
