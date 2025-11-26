@@ -1341,9 +1341,14 @@
                     migration_v3_addPriceAtAction();
                 }
                 
+                // Migration 3 → 4: Rebuild stock positions from assigned trades
+                if (currentVersion < 4) {
+                    migration_v4_rebuildStockPositions();
+                }
+                
                 // Future migrations go here
-                // if (currentVersion < 4) {
-                //     migration_v4_someOtherFix();
+                // if (currentVersion < 5) {
+                //     migration_v5_someOtherFix();
                 // }
                 
                 // Update version
@@ -1443,6 +1448,80 @@
             console.log('Migration v3 complete: Fixed', fixedCount, 'trades');
         }
 
+        // Migration v3 → v4: Rebuild stock positions from assigned trades
+        function migration_v4_rebuildStockPositions() {
+            console.log('Running migration v4: Rebuilding stock positions from assigned trades');
+            
+            let rebuiltCount = 0;
+            
+            // Find all assigned PUT trades that don't have a corresponding stock position
+            const assignedPuts = closedTrades.filter(t => 
+                t.status === 'assigned' && 
+                t.type === 'put' && 
+                t.action === 'sell'
+            );
+            
+            assignedPuts.forEach(put => {
+                // Check if this put already has a stock position
+                const existingPosition = stockPositions.find(sp => sp.originalPutId === put.id);
+                
+                if (!existingPosition) {
+                    console.log(`Rebuilding stock position for ${put.symbol} from assigned PUT`);
+                    
+                    // Find any covered calls linked to this position by trade ref
+                    const linkedCalls = trades.filter(t => 
+                        t.symbol === put.symbol &&
+                        t.type === 'call' &&
+                        t.action === 'sell' &&
+                        t.isCoveredCall &&
+                        t.tradeRef === put.tradeRef
+                    );
+                    
+                    // Build covered calls array
+                    const coveredCalls = linkedCalls.map(call => ({
+                        id: call.id,
+                        strike: call.strike,
+                        premium: call.premium * call.contracts * 100,
+                        premiumPerShare: call.premium,
+                        expDate: call.expDate,
+                        dateOpened: call.dateOpened,
+                        notes: call.info || ''
+                    }));
+                    
+                    // Create stock position
+                    const stockPosition = {
+                        id: put.id + '_stock', // Use put ID to prevent duplicates
+                        symbol: put.symbol,
+                        shares: put.contracts * 100,
+                        costBasis: put.strike,
+                        assignedPrice: put.assignmentPrice || put.strike,
+                        totalCost: put.strike * put.contracts * 100,
+                        totalValue: (put.assignmentPrice || put.strike) * put.contracts * 100,
+                        assignedDate: put.dateClosed || put.dateOpened,
+                        originalPutId: put.id,
+                        originalPut: {
+                            strike: put.strike,
+                            premium: put.premium,
+                            contracts: put.contracts,
+                            dateOpened: put.dateOpened,
+                            tradeRef: put.tradeRef,
+                            premiumCollected: put.premium * put.contracts * 100
+                        },
+                        coveredCalls: coveredCalls,
+                        account: put.account || '',
+                        tradeRef: put.tradeRef || '',
+                        status: 'holding'
+                    };
+                    
+                    stockPositions.push(stockPosition);
+                    rebuiltCount++;
+                    console.log(`✅ Rebuilt stock position for ${put.symbol}:`, stockPosition);
+                }
+            });
+            
+            console.log('Migration v4 complete: Rebuilt', rebuiltCount, 'stock positions');
+        }
+
         function checkAuth() {
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser && users[savedUser]) {
@@ -1520,7 +1599,7 @@
         let editingIndex = -1;
         
         // Data version for migrations
-        const CURRENT_DATA_VERSION = 3;
+        const CURRENT_DATA_VERSION = 4;
         let editingFromArray = 'open'; // Track which array we're editing from
         let editingFromGroup = -1; // Track if editing from a group
         let closingIndex = -1;
