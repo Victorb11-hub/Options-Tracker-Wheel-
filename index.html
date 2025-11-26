@@ -1369,7 +1369,8 @@
                         info: info || 'Closing trade',
                         status: 'closed',
                         dateClosed: dateOpened,
-                        isClosingTrade: true
+                        isClosingTrade: true,
+                        isRolled: matchingOpenTrade.isRolled || false // Inherit rolled status
                     };
                     
                     // Move both to closed trades
@@ -3004,9 +3005,10 @@
                     return;
                 }
                 
-                // 1. Mark original trade as closed
+                // 1. Mark original trade as closed AND rolled
                 originalTrade.status = 'closed';
                 originalTrade.dateClosed = rollCloseDate;
+                originalTrade.isRolled = true; // Mark as part of roll chain
                 
                 // 2. Create closing trade (buying back the original)
                 const closingTrade = {
@@ -3026,7 +3028,8 @@
                     info: rollNotes ? `Roll close: ${rollNotes}` : 'Rolled - closing leg',
                     status: 'closed',
                     dateClosed: rollCloseDate,
-                    isClosingTrade: true
+                    isClosingTrade: true,
+                    isRolled: true // Mark as part of roll chain
                 };
                 
                 // 3. Create new opening trade (selling the new option)
@@ -3129,7 +3132,8 @@
                     info: closingNotes || 'Closing trade',
                     status: 'closed',
                     dateClosed: closeDate,
-                    isClosingTrade: true
+                    isClosingTrade: true,
+                    isRolled: openingTrade.isRolled || false // Inherit rolled status from opening trade
                 };
                 
                 // Move opening trade to closed trades
