@@ -850,6 +850,8 @@
                             <th>Symbol</th>
                             <th>Shares</th>
                             <th>Cost Basis</th>
+                            <th>Assigned Price</th>
+                            <th>Total Value</th>
                             <th>Assigned Date</th>
                             <th>Original Put</th>
                             <th>Covered Calls</th>
@@ -940,6 +942,68 @@
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button class="success" onclick="confirmClose()">Close Position</button>
                 <button class="secondary" onclick="closeCloseModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="assignModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Assign Stock</div>
+                <button class="close-btn" onclick="closeAssignModal()">×</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Assignment Date</label>
+                    <input type="date" id="assignDate">
+                </div>
+                <div class="form-group">
+                    <label>Assignment Price (per share)</label>
+                    <input type="number" id="assignmentPrice" placeholder="870.00" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Assignment Notes</label>
+                    <input type="text" id="assignmentNotes" placeholder="Stock assigned">
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button style="background: #ff8844; color: #000;" onclick="confirmAssign()">Assign Stock</button>
+                <button class="secondary" onclick="closeAssignModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="sellCallModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Sell Covered Call</div>
+                <button class="close-btn" onclick="closeSellCallModal()">×</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Strike Price</label>
+                    <input type="number" id="callStrike" placeholder="900.00" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Premium Received</label>
+                    <input type="number" id="callPremium" placeholder="5.00" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Expiration Date</label>
+                    <input type="date" id="callExpDate">
+                </div>
+                <div class="form-group">
+                    <label>Date Opened</label>
+                    <input type="date" id="callDateOpened">
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <input type="text" id="callNotes" placeholder="Covered call">
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="success" onclick="confirmSellCall()">Sell Call</button>
+                <button class="secondary" onclick="closeSellCallModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -1952,6 +2016,9 @@
                                 <button class="btn-small" onclick="editTrade(${actualIndex})">Edit</button>
                                 <button class="btn-small" style="background: #4488ff; color: #fff;" onclick="openRollModal(${actualIndex})">Roll</button>
                                 <button class="btn-small success" onclick="openCloseModal(${actualIndex})">Close</button>
+                                ${trade.type === 'put' && trade.action === 'sell' ? `
+                                    <button class="btn-small" style="background: #ff8844; color: #000;" onclick="assignStock(${actualIndex})">Assign</button>
+                                ` : ''}
                                 <button class="btn-small danger" onclick="deleteTrade(${actualIndex})">Delete</button>
                             </div>
                         </td>
@@ -2042,6 +2109,9 @@
                                 <button class="btn-small" onclick="editTrade(${actualIndex})">Edit</button>
                                 <button class="btn-small" style="background: #4488ff; color: #fff;" onclick="openRollModal(${actualIndex})">Roll</button>
                                 <button class="btn-small success" onclick="openCloseModal(${actualIndex})">Close</button>
+                                ${trade.type === 'put' && trade.action === 'sell' ? `
+                                    <button class="btn-small" style="background: #ff8844; color: #000;" onclick="assignStock(${actualIndex})">Assign</button>
+                                ` : ''}
                                 <button class="btn-small danger" onclick="deleteTrade(${actualIndex})">Delete</button>
                             </div>
                         </td>
@@ -3794,31 +3864,129 @@
             });
         }
 
+        let assigningIndex = -1;
+
         function assignStock(index) {
+            assigningIndex = index;
             const put = trades[index];
             
-            // Ask for assignment price
-            const assignmentPrice = prompt(`Enter assignment price per share for ${put.symbol}:`, put.strike);
-            if (!assignmentPrice) return;
+            // Pre-fill modal
+            document.getElementById('assignDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('assignmentPrice').value = put.strike;
+            document.getElementById('assignmentNotes').value = '';
             
-            const assignmentPriceNum = parseFloat(assignmentPrice);
-            if (isNaN(assignmentPriceNum) || assignmentPriceNum <= 0) {
-                alert('Invalid assignment price');
+            // Show modal
+            document.getElementById('assignModal').style.display = 'flex';
+        }
+
+        function closeAssignModal() {
+            document.getElementById('assignModal').style.display = 'none';
+            assigningIndex = -1;
+        }
+
+        let sellingCallForStock = -1;
+
+        function openSellCallModal(stockIndex) {
+            sellingCallForStock = stockIndex;
+            const stock = stockPositions[stockIndex];
+            
+            // Pre-fill modal
+            document.getElementById('callDateOpened').value = new Date().toISOString().split('T')[0];
+            document.getElementById('callExpDate').value = '';
+            document.getElementById('callStrike').value = stock.costBasis;
+            document.getElementById('callPremium').value = '';
+            document.getElementById('callNotes').value = '';
+            
+            // Show modal
+            document.getElementById('sellCallModal').style.display = 'flex';
+        }
+
+        function closeSellCallModal() {
+            document.getElementById('sellCallModal').style.display = 'none';
+            sellingCallForStock = -1;
+        }
+
+        function confirmSellCall() {
+            if (sellingCallForStock < 0) return;
+            
+            const stock = stockPositions[sellingCallForStock];
+            const strike = parseFloat(document.getElementById('callStrike').value);
+            const premium = parseFloat(document.getElementById('callPremium').value);
+            const expDate = document.getElementById('callExpDate').value;
+            const dateOpened = document.getElementById('callDateOpened').value;
+            const notes = document.getElementById('callNotes').value;
+            
+            if (!strike || !premium || !expDate || !dateOpened) {
+                alert('Please fill in all required fields');
                 return;
             }
             
-            if (!confirm(`Assign ${put.contracts * 100} shares of ${put.symbol} at $${assignmentPriceNum.toFixed(2)} per share?`)) return;
+            const premiumTotal = premium * stock.shares / 100;
             
-            const today = new Date().toISOString().split('T')[0];
+            // Add to stock's covered calls array
+            const call = {
+                id: Date.now(),
+                strike: strike,
+                premium: premiumTotal,
+                premiumPerShare: premium,
+                expDate: expDate,
+                dateOpened: dateOpened,
+                notes: notes
+            };
+            stock.coveredCalls.push(call);
+            
+            // Create call trade for All Trades tracking
+            const callTrade = {
+                id: Date.now() + Math.random(),
+                symbol: stock.symbol,
+                action: 'sell',
+                type: 'call',
+                contracts: stock.shares / 100,
+                strike: strike,
+                premium: premium,
+                dateOpened: dateOpened,
+                expDate: expDate,
+                tradeRef: stock.tradeRef,
+                account: stock.account,
+                info: notes || `Covered call - ${stock.shares} shares`,
+                status: 'open',
+                isCoveredCall: true,
+                linkedStockId: stock.id
+            };
+            trades.push(callTrade);
+            
+            // Save and render
+            saveData();
+            renderTables();
+            updateStats();
+            closeSellCallModal();
+            
+            alert(`Sold ${stock.shares / 100} call contract(s) at $${strike.toFixed(2)} for $${premiumTotal.toFixed(2)} premium!`);
+        }
+
+        function confirmAssign() {
+            if (assigningIndex < 0) return;
+            
+            const put = trades[assigningIndex];
+            const assignDate = document.getElementById('assignDate').value;
+            const assignmentPrice = parseFloat(document.getElementById('assignmentPrice').value);
+            const assignmentNotes = document.getElementById('assignmentNotes').value;
+            
+            if (!assignDate || !assignmentPrice || assignmentPrice <= 0) {
+                alert('Please enter valid assignment date and price');
+                return;
+            }
             
             // Create stock position
             const stockPosition = {
                 id: Date.now(),
                 symbol: put.symbol,
                 shares: put.contracts * 100,
-                costBasis: assignmentPriceNum,
-                totalCost: assignmentPriceNum * put.contracts * 100,
-                assignedDate: today,
+                costBasis: put.strike,
+                assignedPrice: assignmentPrice,
+                totalCost: put.strike * put.contracts * 100,
+                totalValue: assignmentPrice * put.contracts * 100,
+                assignedDate: assignDate,
                 originalPutId: put.id,
                 originalPut: {
                     strike: put.strike,
@@ -3836,23 +4004,46 @@
             
             // Mark put as assigned
             put.status = 'assigned';
-            put.dateClosed = today;
-            put.assignmentPrice = assignmentPriceNum;
-            put.closingNotes = `Stock assigned at $${assignmentPriceNum.toFixed(2)}`;
+            put.dateClosed = assignDate;
+            put.assignmentPrice = assignmentPrice;
+            put.closingNotes = assignmentNotes || `Stock assigned at $${assignmentPrice.toFixed(2)}`;
             
             // Move put to closed trades
             closedTrades.push(put);
-            trades.splice(index, 1);
+            trades.splice(assigningIndex, 1);
             
             // Add to stock positions
             stockPositions.push(stockPosition);
+            
+            // Create "ASSIGNMENT" trade entry for All Trades tracking
+            const assignmentTrade = {
+                id: Date.now() + Math.random(),
+                symbol: put.symbol,
+                action: 'assignment',
+                type: 'stock',
+                contracts: put.contracts,
+                shares: put.contracts * 100,
+                strike: put.strike,
+                assignedPrice: assignmentPrice,
+                premium: 0,
+                dateOpened: assignDate,
+                expDate: assignDate,
+                tradeRef: put.tradeRef,
+                account: put.account,
+                info: assignmentNotes || `Assigned ${put.contracts * 100} shares at $${assignmentPrice.toFixed(2)}`,
+                status: 'closed',
+                dateClosed: assignDate,
+                isAssignment: true
+            };
+            closedTrades.push(assignmentTrade);
             
             // Save and render
             saveData();
             renderTables();
             updateStats();
+            closeAssignModal();
             
-            alert(`${stockPosition.shares} shares of ${stockPosition.symbol} added to Stock Positions at $${stockPosition.costBasis.toFixed(2)} per share!`);
+            alert(`${stockPosition.shares} shares of ${stockPosition.symbol} assigned at $${assignmentPrice.toFixed(2)} per share!`);
         }
 
         function renderStockPositions() {
@@ -3862,7 +4053,7 @@
             if (stockPositions.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" style="text-align: center; color: #666; padding: 40px;">
+                        <td colspan="10" style="text-align: center; color: #666; padding: 40px;">
                             No stock positions yet. Assign a put to create a stock position.
                         </td>
                     </tr>
@@ -3873,8 +4064,6 @@
             tbody.innerHTML = stockPositions.map((stock, index) => {
                 const callsCount = stock.coveredCalls.length;
                 const totalCallPremiums = stock.coveredCalls.reduce((sum, call) => sum + call.premium, 0);
-                
-                // Calculate running P&L
                 const putPremium = stock.originalPut.premiumCollected;
                 const runningPL = putPremium + totalCallPremiums;
                 
@@ -3882,7 +4071,9 @@
                     <tr>
                         <td>${makeSymbolClickable(stock.symbol, false)}</td>
                         <td><strong>${stock.shares}</strong></td>
-                        <td>$${stock.costBasis.toFixed(2)}<br><span style="font-size: 0.8rem; color: #888;">Total: $${stock.totalCost.toLocaleString()}</span></td>
+                        <td>$${stock.costBasis.toFixed(2)}</td>
+                        <td><strong style="color: #ff8844;">$${stock.assignedPrice.toFixed(2)}</strong></td>
+                        <td><strong>$${stock.totalValue.toLocaleString()}</strong></td>
                         <td>${formatDate(stock.assignedDate)}</td>
                         <td>
                             Strike: $${stock.originalPut.strike.toFixed(2)}<br>
@@ -3896,6 +4087,7 @@
                         <td>${stock.account || '-'}</td>
                         <td>
                             <div class="action-buttons">
+                                <button class="btn-small" style="background: #4488ff; color: #fff;" onclick="openSellCallModal(${index})">Sell Call</button>
                                 <button class="btn-small" style="background: #00ff88; color: #000;" onclick="calledAway(${index})">Called Away</button>
                                 <button class="btn-small danger" onclick="deleteStockPosition(${index})">Delete</button>
                             </div>
@@ -3927,8 +4119,37 @@
             // Calculate full cycle P&L
             const putPremium = stock.originalPut.premiumCollected;
             const callPremiums = stock.coveredCalls.reduce((sum, call) => sum + call.premium, 0);
-            const stockProfit = (salePriceNum - stock.costBasis) * stock.shares;
+            const stockProfit = (salePriceNum - stock.assignedPrice) * stock.shares;
             const totalPL = putPremium + callPremiums + stockProfit;
+            
+            // Create "CALLED AWAY" trade entry
+            const calledAwayTrade = {
+                id: Date.now() + Math.random(),
+                symbol: stock.symbol,
+                action: 'called-away',
+                type: 'stock',
+                contracts: stock.shares / 100,
+                shares: stock.shares,
+                strike: salePriceNum,
+                premium: 0,
+                dateOpened: today,
+                expDate: today,
+                tradeRef: stock.tradeRef,
+                account: stock.account,
+                info: `Called away at $${salePriceNum.toFixed(2)} - Total P&L: $${totalPL.toFixed(2)}`,
+                status: 'closed',
+                dateClosed: today,
+                isCalledAway: true,
+                fullCyclePL: totalPL,
+                cycleDetails: {
+                    putPremium: putPremium,
+                    callPremiums: callPremiums,
+                    stockProfit: stockProfit,
+                    assignedPrice: stock.assignedPrice,
+                    salePrice: salePriceNum
+                }
+            };
+            closedTrades.push(calledAwayTrade);
             
             // Remove from active positions
             stockPositions.splice(index, 1);
@@ -3941,7 +4162,7 @@
             alert(`✅ Stock Called Away!\n\n` +
                   `Symbol: ${stock.symbol}\n` +
                   `Shares: ${stock.shares}\n` +
-                  `Cost Basis: $${stock.costBasis.toFixed(2)}\n` +
+                  `Assigned Price: $${stock.assignedPrice.toFixed(2)}\n` +
                   `Sale Price: $${salePriceNum.toFixed(2)}\n\n` +
                   `Put Premium: +$${putPremium.toFixed(2)}\n` +
                   `Call Premiums: +$${callPremiums.toFixed(2)}\n` +
