@@ -2780,7 +2780,12 @@
                                     const pl = calculatePL(trade);
                                     return `
                                         <tr>
-                                            <td><strong>${trade.symbol}</strong>${trade.isRolled ? '<span class="rolled-badge">Rolled</span>' : ''}</td>
+                                            <td>
+                                                <strong>${trade.symbol}</strong>
+                                                ${trade.isRolled ? '<span style="background: #4488ff; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 5px;">ROLLED</span>' : ''}
+                                                ${trade.isAssignment ? '<span style="background: #ff8844; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 5px;">ASSIGNED</span>' : ''}
+                                                ${trade.isCalledAway ? '<span style="background: #00ff88; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 5px;">CALLED AWAY</span>' : ''}
+                                            </td>
                                             <td>${trade.contracts}</td>
                                             <td>$${trade.strike.toFixed(2)}</td>
                                             <td>$${trade.premium.toFixed(2)}</td>
@@ -3196,7 +3201,12 @@
                                     
                                     return `
                                         <tr>
-                                            <td>${makeSymbolClickable(trade.symbol, trade.isRolled)}</td>
+                                            <td>
+                                                ${makeSymbolClickable(trade.symbol, trade.isRolled)}
+                                                ${trade.isRolled ? '<span style="background: #4488ff; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 5px;">ROLLED</span>' : ''}
+                                                ${trade.isAssignment ? '<span style="background: #ff8844; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 5px;">ASSIGNED</span>' : ''}
+                                                ${trade.isCalledAway ? '<span style="background: #00ff88; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 5px;">CALLED AWAY</span>' : ''}
+                                            </td>
                                             <td>${trade.contracts}</td>
                                             <td>$${trade.strike.toFixed(2)}</td>
                                             <td class="${trade.action === 'sell' ? 'positive-value' : 'negative-value'}">
@@ -4393,6 +4403,33 @@
             const stockProfit = (salePriceNum - stock.assignedPrice) * stock.shares;
             const totalPL = putPremium + callPremiums + stockProfit;
             
+            // Close any open covered calls (they're being exercised)
+            const openCoveredCalls = trades.filter(t => 
+                t.symbol === stock.symbol &&
+                t.type === 'call' &&
+                t.action === 'sell' &&
+                t.isCoveredCall &&
+                t.tradeRef === stock.tradeRef
+            );
+            
+            console.log(`Closing ${openCoveredCalls.length} open covered calls for ${stock.symbol}`);
+            
+            openCoveredCalls.forEach(call => {
+                // Mark call as closed (exercised)
+                call.status = 'closed';
+                call.dateClosed = calledAwayDate;
+                call.closingNotes = `Exercised - Stock called away at $${salePriceNum.toFixed(2)}`;
+                
+                // Move to closed trades
+                closedTrades.push(call);
+                
+                // Remove from open trades
+                const callIndex = trades.indexOf(call);
+                if (callIndex >= 0) {
+                    trades.splice(callIndex, 1);
+                }
+            });
+            
             // Create "CALLED AWAY" trade entry
             const calledAwayTrade = {
                 id: Date.now() + Math.random(),
@@ -4450,7 +4487,8 @@
                     t.symbol === stock.symbol &&
                     t.type === 'call' &&
                     t.action === 'sell' &&
-                    t.tradeRef === stock.tradeRef
+                    t.tradeRef === stock.tradeRef &&
+                    !t.isClosingTrade // Exclude closing trades (buy backs)
                 );
                 wheelTrades.push(...coveredCalls);
                 
