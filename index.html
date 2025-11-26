@@ -3145,6 +3145,19 @@
                 `;
                 return;
             }
+            
+            // Sort groups by most recent dateClosed (newest first)
+            groupsToDisplay.sort((a, b) => {
+                const getLatestDate = (group) => {
+                    if (group.dateClosed) return new Date(group.dateClosed);
+                    // Find latest dateClosed from trades
+                    const dates = group.trades
+                        .filter(t => t.dateClosed)
+                        .map(t => new Date(t.dateClosed));
+                    return dates.length > 0 ? new Date(Math.max(...dates)) : new Date(0);
+                };
+                return getLatestDate(b) - getLatestDate(a); // Descending (newest first)
+            });
 
             container.innerHTML = groupsToDisplay.map((group) => {
                 // Find actual index in tradeGroups array
