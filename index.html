@@ -1317,27 +1317,104 @@
         function addTrade() {
             const tradeRef = document.getElementById('tradeRef').value.trim();
             const symbol = document.getElementById('symbol').value.toUpperCase().trim();
-            const contracts = parseInt(document.getElementById('contracts').value);
-            const strike = parseFloat(document.getElementById('strike').value);
-            const premium = parseFloat(document.getElementById('premium').value);
+            const contracts = parseInt(document.getElementById('contracts').value) || 1;
+            const strike = parseFloat(document.getElementById('strike').value) || 0;
+            const premium = parseFloat(document.getElementById('premium').value) || 0;
             const action = document.getElementById('action').value;
             const type = document.getElementById('type').value;
             const dateOpened = document.getElementById('dateOpened').value;
             const expDate = document.getElementById('expDate').value;
-            const priceAtAction = parseFloat(document.getElementById('priceAtAction').value);
+            const priceAtAction = parseFloat(document.getElementById('priceAtAction').value) || 0;
             const info = document.getElementById('info').value;
             const account = document.getElementById('account').value;
 
-            if (!symbol || !contracts || !strike || !premium || !dateOpened || !expDate || !priceAtAction) {
-                alert('Please fill in all required fields');
+            // Minimum validation - only require symbol
+            if (!symbol) {
+                alert('Please enter a symbol');
                 return;
             }
 
+            // Smart close detection: If BUY action with Trade Ref #, check for matching open SELL
+            if (action === 'buy' && tradeRef && tradeRef.trim() !== '') {
+                const matchingOpenTrade = trades.find(t => 
+                    t.tradeRef === tradeRef &&
+                    t.symbol === symbol &&
+                    t.action === 'sell' &&
+                    t.status === 'open' &&
+                    t.strike === strike
+                );
+
+                if (matchingOpenTrade) {
+                    // This is a closing trade! Mark the original as closed and group them
+                    console.log('Smart close detected! Closing trade:', matchingOpenTrade);
+                    
+                    matchingOpenTrade.status = 'closed';
+                    matchingOpenTrade.dateClosed = dateOpened;
+                    
+                    // Create the closing trade
+                    const closingTrade = {
+                        id: Date.now() + Math.random(),
+                        tradeRef: tradeRef,
+                        account: account || matchingOpenTrade.account,
+                        groupId: matchingOpenTrade.groupId,
+                        symbol,
+                        contracts,
+                        strike,
+                        premium,
+                        action: 'buy',
+                        type,
+                        dateOpened,
+                        expDate,
+                        priceAtAction,
+                        info: info || 'Closing trade',
+                        status: 'closed',
+                        dateClosed: dateOpened,
+                        isClosingTrade: true
+                    };
+                    
+                    // Move both to closed trades
+                    closedTrades.push(matchingOpenTrade);
+                    closedTrades.push(closingTrade);
+                    
+                    // Remove from open trades
+                    const index = trades.indexOf(matchingOpenTrade);
+                    if (index > -1) {
+                        trades.splice(index, 1);
+                    }
+                    
+                    // Create or update group
+                    let existingGroup = tradeGroups.find(g => 
+                        g.name === `Trade Ref: ${tradeRef}` ||
+                        (g.trades && g.trades.some(t => t.tradeRef === tradeRef))
+                    );
+                    
+                    if (existingGroup) {
+                        existingGroup.trades.push(matchingOpenTrade);
+                        existingGroup.trades.push(closingTrade);
+                    } else {
+                        tradeGroups.push({
+                            id: Date.now(),
+                            name: `Trade Ref: ${tradeRef}`,
+                            trades: [matchingOpenTrade, closingTrade],
+                            created: new Date().toISOString()
+                        });
+                    }
+                    
+                    saveData();
+                    renderTables();
+                    updateStats();
+                    clearForm();
+                    alert('Position closed and grouped automatically!');
+                    return;
+                }
+            }
+
+            // Regular trade (not a close)
             const trade = {
-                id: Date.now() + Math.random(), // Unique ID
-                tradeRef: tradeRef || '', // Trade reference number
-                account: account || '', // Account name
-                groupId: `${symbol}-${strike}-${type}-${expDate}`, // Group related trades
+                id: Date.now() + Math.random(),
+                tradeRef: tradeRef || '',
+                account: account || '',
+                groupId: `${symbol}-${strike}-${type}-${expDate}`,
                 symbol,
                 contracts,
                 strike,
@@ -2910,9 +2987,9 @@
                 const rollNewType = document.getElementById('rollNewType').value;
                 const rollNotes = document.getElementById('rollNotes').value;
                 
-                // Validate inputs
-                if (!rollNewStrike || !rollNewPremium || !rollNewExpDate || !rollPriceAtAction) {
-                    alert('Please fill in all required fields for the new position');
+                // Minimal validation - only require strike and exp date
+                if (!rollNewStrike || !rollNewExpDate) {
+                    alert('Please enter at least a new strike and expiration date');
                     return;
                 }
                 
@@ -2950,12 +3027,12 @@
                     symbol: originalTrade.symbol,
                     contracts: originalTrade.contracts,
                     strike: rollNewStrike,
-                    premium: rollNewPremium,
+                    premium: rollNewPremium || 0,
                     action: 'sell',
                     type: rollNewType,
                     dateOpened: rollCloseDate,
                     expDate: rollNewExpDate,
-                    priceAtAction: rollPriceAtAction,
+                    priceAtAction: rollPriceAtAction || 0,
                     info: rollNotes ? `Rolled: ${rollNotes}` : 'Rolled - new leg',
                     status: 'open',
                     isRolled: true // Mark this position as rolled
