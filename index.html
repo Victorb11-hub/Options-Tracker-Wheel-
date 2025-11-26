@@ -1813,6 +1813,12 @@
             if (trade.type === 'put' && trade.action === 'sell') {
                 return trade.strike * trade.contracts * 100;
             }
+            
+            // Covered calls: cash required = strike * contracts * 100
+            if (trade.type === 'call' && trade.action === 'sell' && trade.isCoveredCall) {
+                return trade.strike * trade.contracts * 100;
+            }
+            
             return 0;
         }
 
@@ -4178,7 +4184,13 @@
 
         function renderStockPositions() {
             const tbody = document.getElementById('stockPositionsBody');
-            if (!tbody) return;
+            if (!tbody) {
+                console.error('Stock Positions tbody not found!');
+                return;
+            }
+            
+            console.log('Rendering Stock Positions, count:', stockPositions.length);
+            console.log('Stock Positions data:', stockPositions);
             
             if (stockPositions.length === 0) {
                 tbody.innerHTML = `
@@ -4192,9 +4204,16 @@
             }
             
             tbody.innerHTML = stockPositions.map((stock, index) => {
+                // Safety checks for missing data
+                if (!stock.coveredCalls) stock.coveredCalls = [];
+                if (!stock.originalPut) {
+                    console.error('Stock position missing originalPut:', stock);
+                    return '';
+                }
+                
                 const callsCount = stock.coveredCalls.length;
                 const totalCallPremiums = stock.coveredCalls.reduce((sum, call) => sum + call.premium, 0);
-                const putPremium = stock.originalPut.premiumCollected;
+                const putPremium = stock.originalPut.premiumCollected || 0;
                 const runningPL = putPremium + totalCallPremiums;
                 
                 // Build covered calls list
