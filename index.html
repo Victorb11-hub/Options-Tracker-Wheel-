@@ -803,6 +803,7 @@
                         <button onclick="filterAllTrades('open')" id="filterOpenBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Open Trades</button>
                         <button onclick="filterAllTrades('closed')" id="filterClosedBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Closed Trades</button>
                         <button onclick="filterAllTrades('rolled')" id="filterRolledBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Rolled Trades</button>
+                        <button onclick="filterAllTrades('assigned')" id="filterAssignedBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Assigned</button>
                     </div>
                 </div>
                 <table>
@@ -878,6 +879,7 @@
                         <button onclick="filterSymbolTrades('open')" id="symbolFilterOpenBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Open Trades</button>
                         <button onclick="filterSymbolTrades('closed')" id="symbolFilterClosedBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Closed Trades</button>
                         <button onclick="filterSymbolTrades('rolled')" id="symbolFilterRolledBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Rolled Trades</button>
+                        <button onclick="filterSymbolTrades('assigned')" id="symbolFilterAssignedBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Assigned</button>
                     </div>
                 </div>
                 <table>
@@ -1824,6 +1826,39 @@
                 `;
             }).join('');
             
+            // Add stock positions to the table
+            const stockRows = stockPositions.map((stock, index) => {
+                const callsCount = stock.coveredCalls.length;
+                const totalCallPremiums = stock.coveredCalls.reduce((sum, call) => sum + call.premium, 0);
+                const runningPL = stock.originalPut.premiumCollected + totalCallPremiums;
+                
+                return `
+                    <tr style="background: #1a1a2a; border-left: 3px solid #ff8844;">
+                        <td>${makeSymbolClickable(stock.symbol, false)}<br><span style="font-size: 0.8rem; color: #ff8844;">STOCK</span></td>
+                        <td><strong>${stock.shares / 100}</strong><br><span style="font-size: 0.8rem;">(${stock.shares} shares)</span></td>
+                        <td>$${stock.costBasis.toFixed(2)}</td>
+                        <td><span style="color: #00ff88;">+$${stock.originalPut.premiumCollected.toFixed(2)}</span></td>
+                        <td colspan="2"><span style="background: #ff8844; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold;">ASSIGNED</span></td>
+                        <td>${formatDate(stock.assignedDate)}</td>
+                        <td>-</td>
+                        <td>$${stock.totalCost.toLocaleString()}</td>
+                        <td colspan="2">${callsCount} call${callsCount !== 1 ? 's' : ''}</td>
+                        <td class="${runningPL >= 0 ? 'positive-value' : 'negative-value'}"><strong>${runningPL >= 0 ? '+' : ''}$${runningPL.toFixed(2)}</strong></td>
+                        <td>Running P&L</td>
+                        <td style="color: #00ff88;"><strong>${stock.tradeRef || '-'}</strong></td>
+                        <td>${stock.account || '-'}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-small" style="background: #00ff88; color: #000;" onclick="calledAway(${index})">Called Away</button>
+                                <button class="btn-small danger" onclick="deleteStockPosition(${index})">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            tbody.innerHTML = tbody.innerHTML + stockRows;
+            
             // Populate stock filter dropdown
             populateStockFilter();
             
@@ -2232,6 +2267,8 @@
             document.getElementById('filterClosedBtn').style.color = filterType === 'closed' ? '#000' : '#fff';
             document.getElementById('filterRolledBtn').style.background = filterType === 'rolled' ? '#00ff88' : '#333';
             document.getElementById('filterRolledBtn').style.color = filterType === 'rolled' ? '#000' : '#fff';
+            document.getElementById('filterAssignedBtn').style.background = filterType === 'assigned' ? '#00ff88' : '#333';
+            document.getElementById('filterAssignedBtn').style.color = filterType === 'assigned' ? '#000' : '#fff';
             
             renderAllTrades();
         }
@@ -2270,6 +2307,8 @@
             document.getElementById('symbolFilterClosedBtn').style.color = filterType === 'closed' ? '#000' : '#fff';
             document.getElementById('symbolFilterRolledBtn').style.background = filterType === 'rolled' ? '#00ff88' : '#333';
             document.getElementById('symbolFilterRolledBtn').style.color = filterType === 'rolled' ? '#000' : '#fff';
+            document.getElementById('symbolFilterAssignedBtn').style.background = filterType === 'assigned' ? '#00ff88' : '#333';
+            document.getElementById('symbolFilterAssignedBtn').style.color = filterType === 'assigned' ? '#000' : '#fff';
             
             renderSymbolTrades();
         }
@@ -2336,6 +2375,27 @@
                 filteredTrades = allTrades.filter(t => {
                     if (t.isRolled) return true;
                     if (t.tradeRef && t.tradeRef.trim() && rolledTradeRefs.has(t.tradeRef)) {
+                        return true;
+                    }
+                    return false;
+                });
+            } else if (symbolTradesFilter === 'assigned') {
+                const assignedTradeRefs = new Set();
+                stockPositions.forEach(sp => {
+                    if (sp.symbol === currentSymbol && sp.tradeRef && sp.tradeRef.trim()) {
+                        assignedTradeRefs.add(sp.tradeRef);
+                    }
+                });
+                
+                closedTrades.forEach(t => {
+                    if (t.symbol === currentSymbol && t.status === 'assigned' && t.tradeRef && t.tradeRef.trim()) {
+                        assignedTradeRefs.add(t.tradeRef);
+                    }
+                });
+                
+                filteredTrades = allTrades.filter(t => {
+                    if (t.status === 'assigned') return true;
+                    if (t.tradeRef && t.tradeRef.trim() && assignedTradeRefs.has(t.tradeRef)) {
                         return true;
                     }
                     return false;
@@ -2561,6 +2621,30 @@
                     }
                     return false;
                 });
+            } else if (allTradesFilter === 'assigned') {
+                // Find all Trade Ref #s that have assigned stock positions
+                const assignedTradeRefs = new Set();
+                stockPositions.forEach(sp => {
+                    if (sp.tradeRef && sp.tradeRef.trim()) {
+                        assignedTradeRefs.add(sp.tradeRef);
+                    }
+                });
+                
+                // Also find trades marked as assigned
+                closedTrades.forEach(t => {
+                    if (t.status === 'assigned' && t.tradeRef && t.tradeRef.trim()) {
+                        assignedTradeRefs.add(t.tradeRef);
+                    }
+                });
+                
+                // Show all trades that share a Trade Ref # with assigned positions
+                filteredTrades = allTrades.filter(t => {
+                    if (t.status === 'assigned') return true;
+                    if (t.tradeRef && t.tradeRef.trim() && assignedTradeRefs.has(t.tradeRef)) {
+                        return true;
+                    }
+                    return false;
+                });
             }
             
             if (filteredTrades.length === 0) {
@@ -2594,8 +2678,8 @@
                 }
             });
 
-            // Special handling for Rolled Trades filter - group by Trade Ref #
-            if (allTradesFilter === 'rolled') {
+            // Special handling for Rolled Trades and Assigned Trades filters - group by Trade Ref #
+            if (allTradesFilter === 'rolled' || allTradesFilter === 'assigned') {
                 // Group trades by Trade Ref #
                 const groupedByRef = {};
                 filteredTrades.forEach(trade => {
@@ -3711,9 +3795,20 @@
         }
 
         function assignStock(index) {
-            if (!confirm('Mark this put as assigned and convert to stock position?')) return;
-            
             const put = trades[index];
+            
+            // Ask for assignment price
+            const assignmentPrice = prompt(`Enter assignment price per share for ${put.symbol}:`, put.strike);
+            if (!assignmentPrice) return;
+            
+            const assignmentPriceNum = parseFloat(assignmentPrice);
+            if (isNaN(assignmentPriceNum) || assignmentPriceNum <= 0) {
+                alert('Invalid assignment price');
+                return;
+            }
+            
+            if (!confirm(`Assign ${put.contracts * 100} shares of ${put.symbol} at $${assignmentPriceNum.toFixed(2)} per share?`)) return;
+            
             const today = new Date().toISOString().split('T')[0];
             
             // Create stock position
@@ -3721,8 +3816,8 @@
                 id: Date.now(),
                 symbol: put.symbol,
                 shares: put.contracts * 100,
-                costBasis: put.strike,
-                totalCost: put.strike * put.contracts * 100,
+                costBasis: assignmentPriceNum,
+                totalCost: assignmentPriceNum * put.contracts * 100,
                 assignedDate: today,
                 originalPutId: put.id,
                 originalPut: {
@@ -3742,7 +3837,8 @@
             // Mark put as assigned
             put.status = 'assigned';
             put.dateClosed = today;
-            put.closingNotes = 'Stock assigned';
+            put.assignmentPrice = assignmentPriceNum;
+            put.closingNotes = `Stock assigned at $${assignmentPriceNum.toFixed(2)}`;
             
             // Move put to closed trades
             closedTrades.push(put);
@@ -3778,6 +3874,10 @@
                 const callsCount = stock.coveredCalls.length;
                 const totalCallPremiums = stock.coveredCalls.reduce((sum, call) => sum + call.premium, 0);
                 
+                // Calculate running P&L
+                const putPremium = stock.originalPut.premiumCollected;
+                const runningPL = putPremium + totalCallPremiums;
+                
                 return `
                     <tr>
                         <td>${makeSymbolClickable(stock.symbol, false)}</td>
@@ -3786,7 +3886,7 @@
                         <td>${formatDate(stock.assignedDate)}</td>
                         <td>
                             Strike: $${stock.originalPut.strike.toFixed(2)}<br>
-                            Premium: $${stock.originalPut.premiumCollected.toFixed(2)}<br>
+                            Premium: <span style="color: #00ff88;">+$${stock.originalPut.premiumCollected.toFixed(2)}</span><br>
                             <span style="font-size: 0.8rem; color: #888;">Ref: ${stock.originalPut.tradeRef || '-'}</span>
                         </td>
                         <td>
@@ -3798,6 +3898,11 @@
                             <div class="action-buttons">
                                 <button class="btn-small" style="background: #00ff88; color: #000;" onclick="calledAway(${index})">Called Away</button>
                                 <button class="btn-small danger" onclick="deleteStockPosition(${index})">Delete</button>
+                            </div>
+                            <div style="margin-top: 5px; font-size: 0.85rem;">
+                                <strong class="${runningPL >= 0 ? 'positive-value' : 'negative-value'}">
+                                    Running P&L: ${runningPL >= 0 ? '+' : ''}$${runningPL.toFixed(2)}
+                                </strong>
                             </div>
                         </td>
                     </tr>
