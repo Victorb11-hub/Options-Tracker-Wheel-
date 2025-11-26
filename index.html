@@ -4423,6 +4423,68 @@
             };
             closedTrades.push(calledAwayTrade);
             
+            // Create or update Closed Group with ALL wheel cycle trades
+            if (stock.tradeRef && stock.tradeRef.trim()) {
+                // Find all trades related to this wheel cycle by Trade Ref
+                const wheelTrades = [];
+                
+                // 1. Find the original assigned PUT
+                const assignedPut = closedTrades.find(t => 
+                    t.symbol === stock.symbol &&
+                    t.type === 'put' &&
+                    t.status === 'assigned' &&
+                    t.tradeRef === stock.tradeRef
+                );
+                if (assignedPut) wheelTrades.push(assignedPut);
+                
+                // 2. Find the ASSIGNMENT trade
+                const assignmentTrade = closedTrades.find(t =>
+                    t.symbol === stock.symbol &&
+                    t.isAssignment &&
+                    t.tradeRef === stock.tradeRef
+                );
+                if (assignmentTrade) wheelTrades.push(assignmentTrade);
+                
+                // 3. Find all covered CALL trades for this symbol/tradeRef
+                const coveredCalls = closedTrades.filter(t =>
+                    t.symbol === stock.symbol &&
+                    t.type === 'call' &&
+                    t.action === 'sell' &&
+                    t.tradeRef === stock.tradeRef
+                );
+                wheelTrades.push(...coveredCalls);
+                
+                // 4. Add the CALLED AWAY trade
+                wheelTrades.push(calledAwayTrade);
+                
+                // Find existing group or create new one
+                let existingGroup = tradeGroups.find(g => 
+                    g.trades && g.trades.some(t => t.tradeRef === stock.tradeRef)
+                );
+                
+                if (existingGroup) {
+                    // Add missing trades to existing group
+                    console.log('Adding wheel cycle trades to existing group:', existingGroup.name);
+                    wheelTrades.forEach(wt => {
+                        if (!existingGroup.trades.find(et => et.id === wt.id)) {
+                            existingGroup.trades.push(wt);
+                        }
+                    });
+                } else {
+                    // Create new wheel cycle group
+                    console.log('Creating new wheel cycle group for Trade Ref:', stock.tradeRef);
+                    const newGroup = {
+                        id: Date.now(),
+                        name: `Trade Ref: ${stock.tradeRef} - Full Wheel Cycle`,
+                        trades: wheelTrades,
+                        symbol: stock.symbol,
+                        dateOpened: stock.originalPut.dateOpened,
+                        dateClosed: calledAwayDate
+                    };
+                    tradeGroups.push(newGroup);
+                }
+            }
+            
             // Remove from active positions
             stockPositions.splice(callingAwayStock, 1);
             
@@ -4430,6 +4492,7 @@
             saveData();
             closeCalledAwayModal();
             renderStockPositions();
+            renderGroups();
             updateStats();
             
             alert(`✅ Stock Called Away!\n\n` +
