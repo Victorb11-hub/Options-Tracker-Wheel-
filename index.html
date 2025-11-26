@@ -636,6 +636,9 @@
                 <div class="form-group">
                     <label>Trade Ref #</label>
                     <input type="text" id="tradeRef" placeholder="e.g., TSLA-001">
+                    <div id="lastRefDisplay" style="margin-top: 5px; padding: 5px 8px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; font-size: 0.85rem; color: #00ff88;">
+                        Last Ref # used: <span id="lastRefValue" style="font-weight: bold;">None</span>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Account</label>
@@ -1238,6 +1241,27 @@
             closedTrades = JSON.parse(localStorage.getItem(getUserStorageKey('wheelClosedTrades'))) || [];
             tradeGroups = JSON.parse(localStorage.getItem(getUserStorageKey('wheelTradeGroups'))) || [];
             customAccounts = JSON.parse(localStorage.getItem(getUserStorageKey('customAccounts'))) || [];
+            updateLastRefDisplay();
+        }
+
+        function updateLastRefDisplay() {
+            // Get all trades with Trade Ref #s
+            const allTrades = [...trades, ...closedTrades];
+            const tradesWithRef = allTrades.filter(t => t.tradeRef && t.tradeRef.trim() !== '');
+            
+            if (tradesWithRef.length === 0) {
+                document.getElementById('lastRefValue').textContent = 'None';
+                return;
+            }
+            
+            // Sort by dateOpened (most recent first)
+            tradesWithRef.sort((a, b) => {
+                return new Date(b.dateOpened) - new Date(a.dateOpened);
+            });
+            
+            // Get the most recent Trade Ref #
+            const lastRef = tradesWithRef[0].tradeRef;
+            document.getElementById('lastRefValue').textContent = lastRef;
         }
 
         function saveUserData() {
@@ -1404,6 +1428,7 @@
                     saveData();
                     renderTables();
                     updateStats();
+                    updateLastRefDisplay();
                     clearForm();
                     alert('Position closed and grouped automatically!');
                     return;
@@ -1433,6 +1458,7 @@
             saveData();
             renderTables();
             updateStats();
+            updateLastRefDisplay();
             clearForm();
         }
 
@@ -3187,6 +3213,7 @@
                     renderGroups();
                 }
                 updateStats();
+                updateLastRefDisplay();
                 closeRollModal();
                 alert('Position rolled successfully! Check Closed Groups to see the complete roll.');
             }
@@ -3270,6 +3297,7 @@
                     renderGroups();
                 }
                 updateStats();
+                updateLastRefDisplay();
                 closeCloseModal();
                 alert('Position closed and group created successfully');
             }
