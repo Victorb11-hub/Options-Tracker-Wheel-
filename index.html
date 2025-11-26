@@ -1984,7 +1984,24 @@
             } else if (allTradesFilter === 'closed') {
                 filteredTrades = allTrades.filter(t => !t.isOpen);
             } else if (allTradesFilter === 'rolled') {
-                filteredTrades = allTrades.filter(t => t.isRolled);
+                // Find all Trade Ref #s that have at least one rolled position
+                const rolledTradeRefs = new Set();
+                allTrades.forEach(t => {
+                    if (t.isRolled && t.tradeRef && t.tradeRef.trim()) {
+                        rolledTradeRefs.add(t.tradeRef);
+                    }
+                });
+                
+                // Show all trades that either:
+                // 1. Are marked as rolled, OR
+                // 2. Share a Trade Ref # with a rolled position
+                filteredTrades = allTrades.filter(t => {
+                    if (t.isRolled) return true; // Always show rolled positions
+                    if (t.tradeRef && t.tradeRef.trim() && rolledTradeRefs.has(t.tradeRef)) {
+                        return true; // Show trades with same Trade Ref as rolled positions
+                    }
+                    return false;
+                });
             }
             
             if (filteredTrades.length === 0) {
