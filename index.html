@@ -1134,9 +1134,87 @@
             loadUserData();
             loadCustomAccounts();
             setTodayDate();
+            
+            // Run data migrations
+            runDataMigrations();
+            
             renderOpenTrades();
             renderAllTrades();
             updateStats();
+        }
+
+        // Data Migration System
+        function runDataMigrations() {
+            if (!currentUser) return;
+            
+            const versionKey = getUserStorageKey('dataVersion');
+            const currentVersion = parseInt(localStorage.getItem(versionKey)) || 1;
+            
+            console.log('Current data version:', currentVersion);
+            console.log('Target data version:', CURRENT_DATA_VERSION);
+            
+            if (currentVersion < CURRENT_DATA_VERSION) {
+                console.log('Running migrations from version', currentVersion, 'to', CURRENT_DATA_VERSION);
+                
+                // Migration 1 → 2: Mark existing rolled positions
+                if (currentVersion < 2) {
+                    migration_v2_markRolledTrades();
+                }
+                
+                // Future migrations go here
+                // if (currentVersion < 3) {
+                //     migration_v3_someOtherFix();
+                // }
+                
+                // Update version
+                localStorage.setItem(versionKey, CURRENT_DATA_VERSION);
+                console.log('Migrations complete! Data version now:', CURRENT_DATA_VERSION);
+                
+                // Save migrated data
+                saveData();
+            } else {
+                console.log('Data is up to date, no migrations needed');
+            }
+        }
+
+        // Migration v1 → v2: Mark existing rolled positions
+        function migration_v2_markRolledTrades() {
+            console.log('Running migration v2: Marking rolled trades');
+            
+            let markedCount = 0;
+            
+            // Mark open trades with "Rolled:" in info
+            trades.forEach(trade => {
+                if (trade.info && trade.info.toLowerCase().includes('rolled:') && !trade.isRolled) {
+                    trade.isRolled = true;
+                    markedCount++;
+                    console.log('Marked as rolled:', trade.symbol, trade.strike, trade.dateOpened);
+                }
+            });
+            
+            // Also check closed trades
+            closedTrades.forEach(trade => {
+                if (trade.info && trade.info.toLowerCase().includes('rolled:') && !trade.isRolled) {
+                    trade.isRolled = true;
+                    markedCount++;
+                    console.log('Marked closed trade as rolled:', trade.symbol, trade.strike, trade.dateOpened);
+                }
+            });
+            
+            // Check trades in groups
+            tradeGroups.forEach(group => {
+                if (group.trades && Array.isArray(group.trades)) {
+                    group.trades.forEach(trade => {
+                        if (trade.info && trade.info.toLowerCase().includes('rolled:') && !trade.isRolled) {
+                            trade.isRolled = true;
+                            markedCount++;
+                            console.log('Marked group trade as rolled:', trade.symbol, trade.strike, trade.dateOpened);
+                        }
+                    });
+                }
+            });
+            
+            console.log('Migration v2 complete: Marked', markedCount, 'trades as rolled');
         }
 
         function checkAuth() {
@@ -1175,6 +1253,9 @@
         let tradeGroups = []; // Groups of related trades (open + close)
         let customAccounts = []; // User-defined account names
         let editingIndex = -1;
+        
+        // Data version for migrations
+        const CURRENT_DATA_VERSION = 2;
         let editingFromArray = 'open'; // Track which array we're editing from
         let editingFromGroup = -1; // Track if editing from a group
         let closingIndex = -1;
