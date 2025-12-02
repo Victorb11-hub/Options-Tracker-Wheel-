@@ -798,12 +798,20 @@
             <div class="table-container">
                 <div class="table-header">
                     <div class="table-title">All Trades (Open & Closed)</div>
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="filterAllTrades('all')" id="filterAllBtn" style="padding: 6px 16px; background: #00ff88; color: #000; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer; font-weight: bold;">All Trades</button>
-                        <button onclick="filterAllTrades('open')" id="filterOpenBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Open Trades</button>
-                        <button onclick="filterAllTrades('closed')" id="filterClosedBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Closed Trades</button>
-                        <button onclick="filterAllTrades('rolled')" id="filterRolledBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Rolled Trades</button>
-                        <button onclick="filterAllTrades('assigned')" id="filterAssignedBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Assigned</button>
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="filterAllTrades('all')" id="filterAllBtn" style="padding: 6px 16px; background: #00ff88; color: #000; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer; font-weight: bold;">All Trades</button>
+                            <button onclick="filterAllTrades('open')" id="filterOpenBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Open Trades</button>
+                            <button onclick="filterAllTrades('closed')" id="filterClosedBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Closed Trades</button>
+                            <button onclick="filterAllTrades('rolled')" id="filterRolledBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Rolled Trades</button>
+                            <button onclick="filterAllTrades('assigned')" id="filterAssignedBtn" style="padding: 6px 16px; background: #333; color: #fff; border: none; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">Assigned</button>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
+                            <label for="allTradesSymbolFilter" style="margin: 0; color: #888; font-size: 0.9rem;">Symbol:</label>
+                            <select id="allTradesSymbolFilter" style="min-width: 120px; background: #000; border: 1px solid #333; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 0.9rem; cursor: pointer;">
+                                <option value="">All</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <table>
@@ -1637,6 +1645,14 @@
         // Load data from localStorage on page load
         window.onload = function() {
             checkAuth(); // Check authentication and show appropriate screen
+            
+            // Add event listener for symbol filter
+            const symbolFilter = document.getElementById('allTradesSymbolFilter');
+            if (symbolFilter) {
+                symbolFilter.addEventListener('change', function() {
+                    renderAllTrades();
+                });
+            }
         };
 
         function setTodayDate() {
@@ -1966,6 +1982,7 @@
 
         function renderTables() {
             renderOpenTrades();
+            populateSymbolFilter();
             if (currentTab === 'groups') {
                 renderGroups();
             } else if (currentTab === 'all') {
@@ -2872,8 +2889,16 @@
             
             // Apply filter
             let filteredTrades = allTrades;
+            
+            // Apply symbol filter first
+            const selectedSymbol = document.getElementById('allTradesSymbolFilter')?.value;
+            if (selectedSymbol && selectedSymbol !== '') {
+                filteredTrades = filteredTrades.filter(t => t.symbol === selectedSymbol);
+            }
+            
+            // Then apply status filter
             if (allTradesFilter === 'open') {
-                filteredTrades = allTrades.filter(t => t.isOpen);
+                filteredTrades = filteredTrades.filter(t => t.isOpen);
             } else if (allTradesFilter === 'closed') {
                 filteredTrades = allTrades.filter(t => !t.isOpen);
             } else if (allTradesFilter === 'rolled') {
@@ -3660,6 +3685,41 @@
             hideUndoButton();
             
             alert('Delete undone successfully!');
+        }
+
+        function populateSymbolFilter() {
+            const filterSelect = document.getElementById('allTradesSymbolFilter');
+            if (!filterSelect) return;
+            
+            // Get all unique symbols from trades
+            const symbols = new Set();
+            trades.forEach(t => symbols.add(t.symbol));
+            closedTrades.forEach(t => symbols.add(t.symbol));
+            tradeGroups.forEach(group => {
+                if (group.trades && Array.isArray(group.trades)) {
+                    group.trades.forEach(t => symbols.add(t.symbol));
+                }
+            });
+            
+            // Sort symbols alphabetically
+            const sortedSymbols = Array.from(symbols).sort();
+            
+            // Store current selection
+            const currentValue = filterSelect.value;
+            
+            // Populate dropdown
+            filterSelect.innerHTML = '<option value="">All</option>';
+            sortedSymbols.forEach(symbol => {
+                const option = document.createElement('option');
+                option.value = symbol;
+                option.textContent = symbol;
+                filterSelect.appendChild(option);
+            });
+            
+            // Restore selection if it still exists
+            if (currentValue && sortedSymbols.includes(currentValue)) {
+                filterSelect.value = currentValue;
+            }
         }
 
         function updateStats() {
