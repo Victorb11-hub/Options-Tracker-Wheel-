@@ -1048,6 +1048,7 @@
                             <th>Price @ Action</th>
                             <th>% OTM</th>
                             <th>P&L</th>
+                            <th>Credit <span style="display: inline-block; width: 14px; height: 14px; background: #333; color: #fff; border-radius: 50%; text-align: center; line-height: 14px; font-size: 0.7rem; cursor: help; font-weight: bold;" title="Net credit from most recent roll (New Premium - Buyback Cost)">ⓘ</span></th>
                             <th>Info</th>
                             <th>Trade Ref #</th>
                             <th>Account</th>
@@ -1056,7 +1057,7 @@
                     </thead>
                     <tbody id="filteredTradesTableBody">
                         <tr>
-                            <td colspan="17" style="text-align: center; color: #666; padding: 40px;">
+                            <td colspan="18" style="text-align: center; color: #666; padding: 40px;">
                                 Select a stock from the dropdown above to view positions.
                             </td>
                         </tr>
@@ -1149,6 +1150,7 @@
                             <th>Cash Required</th>
                             <th>% Return</th>
                             <th>P&L</th>
+                            <th>Credit <span style="display: inline-block; width: 14px; height: 14px; background: #333; color: #fff; border-radius: 50%; text-align: center; line-height: 14px; font-size: 0.7rem; cursor: help; font-weight: bold;" title="Net credit from most recent roll (New Premium - Buyback Cost)">ⓘ</span></th>
                             <th>Info</th>
                             <th>Trade Ref #</th>
                             <th>Account</th>
@@ -1157,7 +1159,7 @@
                     </thead>
                     <tbody id="allTradesTableBody">
                         <tr>
-                            <td colspan="17" style="text-align: center; color: #666; padding: 40px;">
+                            <td colspan="18" style="text-align: center; color: #666; padding: 40px;">
                                 No trades yet.
                             </td>
                         </tr>
@@ -2425,6 +2427,32 @@
             }
         }
 
+        function calculateRollCredit(trade) {
+            // Only applies to rolled positions
+            if (!trade.isRolled || !trade.tradeRef) {
+                return null;
+            }
+            
+            // Find the most recent closed trades with same Trade Ref
+            const relatedClosedTrades = closedTrades
+                .filter(t => t.tradeRef === trade.tradeRef && !t.isClosingTrade)
+                .sort((a, b) => new Date(b.dateClosed || b.dateOpened) - new Date(a.dateClosed || a.dateOpened));
+            
+            if (relatedClosedTrades.length === 0) {
+                return null;
+            }
+            
+            // Get the most recent closed trade (the one we rolled from)
+            const previousTrade = relatedClosedTrades[0];
+            
+            // Calculate: New Premium (current trade) - Buyback Cost (previous trade closing)
+            const newPremium = trade.premium * trade.contracts * 100;
+            const buybackCost = (previousTrade.closePrice || previousTrade.closingPremium || 0) * previousTrade.contracts * 100;
+            const credit = newPremium - buybackCost;
+            
+            return credit;
+        }
+
         function renderTables() {
             renderOpenTrades();
             populateSymbolFilter();
@@ -2731,6 +2759,7 @@
                 const returnPercent = calculateReturnPercent(trade);
                 const otm = calculateOTM(trade);
                 const pl = calculatePL(trade);
+                const rollCredit = calculateRollCredit(trade);
                 
                 symbolCollateral += cashRequired;
                 // Don't add pl here yet - we'll calculate total P&L including roll history below
@@ -2751,6 +2780,7 @@
                         <td>$${(trade.priceAtAction || 0).toFixed(2)}</td>
                         <td class="${parseFloat(otm) >= 0 ? 'positive-value' : 'negative-value'}">${otm}%</td>
                         <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                        <td class="${rollCredit !== null ? (rollCredit >= 0 ? 'positive-value' : 'negative-value') : ''}">${rollCredit !== null ? '$' + rollCredit.toFixed(2) : '-'}</td>
                         <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${trade.info || '-'}</td>
                         <td style="color: #00ff88;"><strong>${trade.tradeRef || '-'}</strong></td>
                         <td>${trade.account || '-'}</td>
@@ -2848,7 +2878,7 @@
                 }
                 
                 // Add spacing between different positions
-                html += `<tr style="height: 20px; background: #000;"><td colspan="17"></td></tr>`;
+                html += `<tr style="height: 20px; background: #000;"><td colspan="18"></td></tr>`;
             });
             
             // Add totals row
@@ -2860,7 +2890,7 @@
                     <td>-</td>
                     <td>-</td>
                     <td class="${symbolPL >= 0 ? 'positive-value' : 'negative-value'}">$${symbolPL.toFixed(2)}</td>
-                    <td colspan="4">-</td>
+                    <td colspan="5">-</td>
                 </tr>
             `;
             
@@ -3474,6 +3504,7 @@
                         const cashRequired = calculateCashRequired(trade);
                         const returnPercent = calculateReturnPercent(trade);
                         const pl = calculatePL(trade);
+                        const rollCredit = calculateRollCredit(trade);
                         const statusBadge = trade.isOpen ? 
                             '<span class="status-badge open">OPEN</span>' : 
                             '<span class="status-badge closed">CLOSED</span>';
@@ -3493,6 +3524,7 @@
                                 <td>${cashRequired > 0 ? '$' + cashRequired.toLocaleString() : '-'}</td>
                                 <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
                                 <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                                <td class="${rollCredit !== null ? (rollCredit >= 0 ? 'positive-value' : 'negative-value') : ''}">${rollCredit !== null ? '$' + rollCredit.toFixed(2) : '-'}</td>
                                 <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${trade.closingNotes || trade.info || '-'}</td>
                                 <td style="color: #00ff88;"><strong>${trade.tradeRef || '-'}</strong></td>
                                 <td>${trade.account || '-'}</td>
@@ -3523,6 +3555,7 @@
                 const cashRequired = calculateCashRequired(trade);
                 const returnPercent = calculateReturnPercent(trade);
                 const pl = calculatePL(trade);
+                const rollCredit = calculateRollCredit(trade);
                 const statusBadge = trade.isOpen ? 
                     '<span class="status-badge open">OPEN</span>' : 
                     '<span class="status-badge closed">CLOSED</span>';
@@ -3542,6 +3575,7 @@
                         <td>${cashRequired > 0 ? '$' + cashRequired.toLocaleString() : '-'}</td>
                         <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
                         <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                        <td class="${rollCredit !== null ? (rollCredit >= 0 ? 'positive-value' : 'negative-value') : ''}">${rollCredit !== null ? '$' + rollCredit.toFixed(2) : '-'}</td>
                         <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${trade.closingNotes || trade.info || '-'}</td>
                         <td style="color: #00ff88;"><strong>${trade.tradeRef || '-'}</strong></td>
                         <td>${trade.account || '-'}</td>
