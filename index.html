@@ -2312,7 +2312,7 @@
             }
             
             const premiumCollected = trade.premium * trade.contracts * 100;
-            const closingCost = (trade.closingPremium || 0) * trade.contracts * 100;
+            const closingCost = (trade.closingPremium || trade.closePrice || 0) * trade.contracts * 100;
             
             if (trade.action === 'sell') {
                 // For closed positions, calculate actual P&L
