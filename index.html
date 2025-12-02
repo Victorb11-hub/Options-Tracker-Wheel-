@@ -4262,7 +4262,7 @@
         function updateTabBadges() {
             const openCount = trades.length;
             const stockCount = stockPositions.length;
-            const groupsCount = tradeGroups.length;
+            const groupsCount = getClosedGroupsCount(); // Use helper function instead
             
             console.log('Updating tab badges:', { openCount, stockCount, groupsCount });
             
@@ -4282,6 +4282,44 @@
                 tabGroupsBadge.textContent = groupsCount;
                 console.log('Set groups badge to:', groupsCount);
             }
+        }
+
+        function getClosedGroupsCount() {
+            // Filter out any invalid groups
+            const validGroups = tradeGroups.filter(g => g.trades && Array.isArray(g.trades) && g.trades.length > 0);
+            
+            // Filter groups to only count if there are NO open trades with the same Trade Ref #
+            const closedGroups = validGroups.filter(group => {
+                // Get Trade Ref # from group (check group name or first trade)
+                let groupTradeRef = null;
+                
+                // Try to extract from group name "Trade Ref: XXX"
+                if (group.name && group.name.startsWith('Trade Ref: ')) {
+                    groupTradeRef = group.name.replace('Trade Ref: ', '');
+                }
+                
+                // Fallback: get from first trade
+                if (!groupTradeRef && group.trades && group.trades.length > 0) {
+                    groupTradeRef = group.trades[0].tradeRef;
+                }
+                
+                // If no Trade Ref, count the group (it's a manual group)
+                if (!groupTradeRef || !groupTradeRef.trim()) {
+                    return true;
+                }
+                
+                // Check if there are any OPEN trades with this Trade Ref #
+                const hasOpenTrades = trades.some(t => 
+                    t.tradeRef && 
+                    t.tradeRef.trim() === groupTradeRef.trim() && 
+                    t.status === 'open'
+                );
+                
+                // Only count group if there are NO open trades with this Trade Ref
+                return !hasOpenTrades;
+            });
+            
+            return closedGroups.length;
         }
 
         function updateDashboardMetrics() {
