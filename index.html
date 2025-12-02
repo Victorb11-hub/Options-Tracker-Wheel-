@@ -1725,6 +1725,11 @@
             renderAllTrades();
             renderStockPositions();
             updateStats();
+            
+            // Ensure badges are updated after everything loads
+            setTimeout(() => {
+                updateTabBadges();
+            }, 100);
         }
 
         // Data Migration System
@@ -4253,13 +4258,24 @@
             const stockCount = stockPositions.length;
             const groupsCount = tradeGroups.length;
             
+            console.log('Updating tab badges:', { openCount, stockCount, groupsCount });
+            
             const tabOpenBadge = document.getElementById('tabOpenCount');
             const tabStockBadge = document.getElementById('tabStockCount');
             const tabGroupsBadge = document.getElementById('tabGroupsCount');
             
-            if (tabOpenBadge) tabOpenBadge.textContent = openCount;
-            if (tabStockBadge) tabStockBadge.textContent = stockCount;
-            if (tabGroupsBadge) tabGroupsBadge.textContent = groupsCount;
+            if (tabOpenBadge) {
+                tabOpenBadge.textContent = openCount;
+                console.log('Set open badge to:', openCount);
+            }
+            if (tabStockBadge) {
+                tabStockBadge.textContent = stockCount;
+                console.log('Set stock badge to:', stockCount);
+            }
+            if (tabGroupsBadge) {
+                tabGroupsBadge.textContent = groupsCount;
+                console.log('Set groups badge to:', groupsCount);
+            }
         }
 
         function updateDashboardMetrics() {
