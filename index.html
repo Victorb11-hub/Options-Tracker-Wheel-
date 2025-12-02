@@ -2733,7 +2733,7 @@
                 const pl = calculatePL(trade);
                 
                 symbolCollateral += cashRequired;
-                symbolPL += pl;
+                // Don't add pl here yet - we'll calculate total P&L including roll history below
 
                 // Current open position row
                 html += `
@@ -2797,6 +2797,9 @@
                     
                     console.log('Total Roll P/L:', rollPL);
                     
+                    // Add the rollPL to the symbol total
+                    symbolPL += rollPL;
+                    
                     html += `
                         <tr style="background: #1a1a1a; border-top: 1px solid #444; border-bottom: 1px solid #444;">
                             <td colspan="12" style="padding: 12px 15px;">
@@ -2839,6 +2842,9 @@
                             </tr>
                         `;
                     });
+                } else {
+                    // No roll history - just add the current trade's P&L
+                    symbolPL += pl;
                 }
                 
                 // Add spacing between different positions
