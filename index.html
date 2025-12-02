@@ -1321,6 +1321,7 @@
             runDataMigrations();
             
             renderOpenTrades();
+            populateSymbolFilter();
             renderAllTrades();
             renderStockPositions();
             updateStats();
@@ -1684,6 +1685,7 @@
             
             // Render appropriate table
             if (tabName === 'all') {
+                populateSymbolFilter();
                 renderAllTrades();
             } else if (tabName === 'groups') {
                 renderGroups();
@@ -2834,6 +2836,9 @@
         }
 
         function renderAllTrades() {
+            // Populate the symbol filter dropdown first
+            populateSymbolFilter();
+            
             const tbody = document.getElementById('allTradesTableBody');
             if (!tbody) return; // Exit if element doesn't exist yet
             
