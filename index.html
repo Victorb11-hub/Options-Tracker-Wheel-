@@ -811,6 +811,7 @@
                             <select id="allTradesSymbolFilter" style="min-width: 120px; background: #000; border: 1px solid #333; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 0.9rem; cursor: pointer;">
                                 <option value="">All</option>
                             </select>
+                            <button onclick="populateSymbolFilter(); renderAllTrades();" style="padding: 6px 12px; background: #333; color: #fff; border: none; border-radius: 4px; font-size: 0.85rem; cursor: pointer;" title="Refresh symbol list">↻</button>
                         </div>
                     </div>
                 </div>
@@ -5047,10 +5048,13 @@
         }
 
         function loadData() {
-            const savedTrades = localStorage.getItem('wheelTrades');
-            const savedClosedTrades = localStorage.getItem('wheelClosedTrades');
-            const savedTradeGroups = localStorage.getItem('wheelTradeGroups');
-            const savedStockPositions = localStorage.getItem('stockPositions');
+            // Use user-specific keys if logged in
+            const getKey = (key) => currentUser ? getUserStorageKey(key) : key;
+            
+            const savedTrades = localStorage.getItem(getKey('wheelTrades'));
+            const savedClosedTrades = localStorage.getItem(getKey('wheelClosedTrades'));
+            const savedTradeGroups = localStorage.getItem(getKey('wheelTradeGroups'));
+            const savedStockPositions = localStorage.getItem(getKey('stockPositions'));
             
             if (savedTrades) {
                 try {
