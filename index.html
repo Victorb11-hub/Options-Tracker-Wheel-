@@ -4740,12 +4740,105 @@
         }
 
         function deleteStockPosition(index) {
-            if (!confirm('Delete this stock position?')) return;
+            if (!confirm('Delete this stock position? This will also remove all related trades (assigned put, assignment, covered calls).')) return;
             
+            const stock = stockPositions[index];
+            console.log('Deleting stock position:', stock);
+            
+            // 1. Delete the original assigned PUT from closedTrades
+            const assignedPutIndex = closedTrades.findIndex(t => 
+                t.id === stock.originalPutId || 
+                (t.symbol === stock.symbol && 
+                 t.type === 'put' && 
+                 t.status === 'assigned' && 
+                 t.tradeRef === stock.tradeRef)
+            );
+            if (assignedPutIndex !== -1) {
+                console.log('Removing assigned PUT from closedTrades');
+                closedTrades.splice(assignedPutIndex, 1);
+            }
+            
+            // 2. Delete the ASSIGNMENT trade from closedTrades
+            const assignmentTradeIndex = closedTrades.findIndex(t => 
+                t.symbol === stock.symbol && 
+                t.isAssignment && 
+                t.tradeRef === stock.tradeRef
+            );
+            if (assignmentTradeIndex !== -1) {
+                console.log('Removing ASSIGNMENT trade from closedTrades');
+                closedTrades.splice(assignmentTradeIndex, 1);
+            }
+            
+            // 3. Delete all covered CALLS related to this stock (both open and closed)
+            // Remove from open trades
+            let removedOpenCalls = 0;
+            for (let i = trades.length - 1; i >= 0; i--) {
+                const t = trades[i];
+                if (t.linkedStockId === stock.id || 
+                    (t.symbol === stock.symbol && 
+                     t.type === 'call' && 
+                     t.action === 'sell' && 
+                     t.isCoveredCall && 
+                     t.tradeRef === stock.tradeRef)) {
+                    console.log('Removing open covered CALL:', t);
+                    trades.splice(i, 1);
+                    removedOpenCalls++;
+                }
+            }
+            
+            // Remove from closed trades
+            let removedClosedCalls = 0;
+            for (let i = closedTrades.length - 1; i >= 0; i--) {
+                const t = closedTrades[i];
+                if (t.linkedStockId === stock.id || 
+                    (t.symbol === stock.symbol && 
+                     t.type === 'call' && 
+                     t.action === 'sell' && 
+                     t.isCoveredCall && 
+                     t.tradeRef === stock.tradeRef)) {
+                    console.log('Removing closed covered CALL:', t);
+                    closedTrades.splice(i, 1);
+                    removedClosedCalls++;
+                }
+            }
+            
+            // 4. Remove all these trades from any groups
+            if (stock.tradeRef && stock.tradeRef.trim()) {
+                tradeGroups.forEach((group, groupIndex) => {
+                    if (!group.trades || !Array.isArray(group.trades)) return;
+                    
+                    // Remove all trades with this tradeRef
+                    const originalLength = group.trades.length;
+                    group.trades = group.trades.filter(t => t.tradeRef !== stock.tradeRef);
+                    
+                    const removed = originalLength - group.trades.length;
+                    if (removed > 0) {
+                        console.log(`Removed ${removed} trades from group:`, group.name);
+                    }
+                    
+                    // If group is now empty, mark it for deletion
+                    if (group.trades.length === 0) {
+                        console.log('Group is empty, will be removed:', group.name);
+                    }
+                });
+                
+                // Remove empty groups
+                tradeGroups = tradeGroups.filter(g => g.trades && g.trades.length > 0);
+            }
+            
+            // 5. Finally, delete the stock position itself
             stockPositions.splice(index, 1);
+            
+            console.log(`Deleted stock position and ${removedOpenCalls} open calls, ${removedClosedCalls} closed calls`);
+            
             saveData();
             renderStockPositions();
+            renderOpenTrades();
+            renderAllTrades();
+            renderGroups();
             updateStats();
+            
+            alert(`✅ Stock position deleted!\n\nAlso removed:\n- Assigned PUT\n- Assignment trade\n- ${removedOpenCalls + removedClosedCalls} covered call(s)\n- Related group entries`);
         }
 
         function deleteTrade(index) {
