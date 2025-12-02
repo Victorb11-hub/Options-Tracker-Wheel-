@@ -824,10 +824,6 @@
                 <div class="stat-value" id="totalCollateral">$0</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Total Premium Collected</div>
-                <div class="stat-value positive" id="totalPremium">$0</div>
-            </div>
-            <div class="stat-card">
                 <div class="stat-label">Total P&L</div>
                 <div class="stat-value" id="totalPL">$0</div>
             </div>
@@ -840,7 +836,10 @@
                 <div class="stat-value" id="openPositions">0</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Avg % Return (Open)</div>
+                <div class="stat-label">
+                    Avg % Return (Open)
+                    <span style="display: inline-block; margin-left: 4px; width: 14px; height: 14px; background: #333; color: #fff; border-radius: 50%; text-align: center; line-height: 14px; font-size: 0.7rem; cursor: help; font-weight: bold;" title="Average % return across all open positions. Calculated as: Average of (premium collected / cash required * 100)">ⓘ</span>
+                </div>
                 <div class="stat-value positive" id="avgReturn">0%</div>
             </div>
             <div class="stat-card">
@@ -974,10 +973,6 @@
                 <div class="metric-card">
                     <div class="metric-title">Avg Trade P&L</div>
                     <div style="font-size: 1.5rem; font-weight: 700;" id="avgTradePL">$0</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">Total Premiums</div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #00ff88;" id="totalPremiums">$0</div>
                 </div>
             </div>
         </div>
@@ -4082,7 +4077,6 @@
         function updateStats() {
             try {
                 let totalCollateral = 0;
-                let totalPremium = 0;
                 let totalPL = 0;
                 let totalReturns = 0;
 
@@ -4090,10 +4084,6 @@
                     const cashReq = calculateCashRequired(trade);
                     totalCollateral += cashReq;
                     
-                    const premium = trade.premium * trade.contracts * 100;
-                    if (trade.action === 'sell') {
-                        totalPremium += premium;
-                    }
                     totalPL += calculatePL(trade);
                     totalReturns += parseFloat(calculateReturnPercent(trade));
                 });
@@ -4104,10 +4094,6 @@
                     return;
                 }
                 
-                const premium = trade.premium * trade.contracts * 100;
-                if (trade.action === 'sell') {
-                    totalPremium += premium;
-                }
                 totalPL += calculatePL(trade);
             });
 
@@ -4143,7 +4129,6 @@
 
             // Update stats
             document.getElementById('totalCollateral').textContent = `$${totalCollateral.toLocaleString()}`;
-            document.getElementById('totalPremium').textContent = `$${totalPremium.toLocaleString()}`;
             document.getElementById('totalPL').textContent = `$${totalPL.toFixed(2)}`;
             document.getElementById('totalPL').className = `stat-value ${totalPL >= 0 ? 'positive' : 'negative'}`;
             document.getElementById('overallReturn').textContent = `${overallReturn}%`;
@@ -4266,19 +4251,6 @@
                 document.getElementById('avgTradePL').textContent = `$${avgTradePL}`;
                 document.getElementById('avgTradePL').className = parseFloat(avgTradePL) >= 0 ? 'positive-value' : 'negative-value';
                 
-                // Total premiums from all closed trades
-                let totalPremiums = 0;
-                closedTrades.forEach(trade => {
-                    if (trade.action === 'sell' && !trade.isAssignment && !trade.isCalledAway) {
-                        totalPremiums += trade.premium * trade.contracts * 100;
-                    }
-                });
-                trades.forEach(trade => {
-                    if (trade.action === 'sell') {
-                        totalPremiums += trade.premium * trade.contracts * 100;
-                    }
-                });
-                document.getElementById('totalPremiums').textContent = `$${totalPremiums.toLocaleString()}`;
 
             } catch (error) {
                 console.error('Error in updateDashboardMetrics:', error);
