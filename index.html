@@ -4151,7 +4151,7 @@
                 });
 
                 const winRate = totalClosedCount > 0 ? ((winningTrades / totalClosedCount) * 100).toFixed(1) : 0;
-                const avgTradePL = totalClosedCount > 0 ? (totalClosedPL / totalClosedCount).toFixed(2) : 0;
+                const avgTradePL = totalClosedCount > 0 ? (Math.round((totalClosedPL / totalClosedCount) * 100) / 100).toFixed(2) : '0.00';
 
                 // Update Win Rate
                 document.getElementById('winRate').textContent = `${winRate}%`;
