@@ -815,10 +815,6 @@
 
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-label">Total Collateral Needed</div>
-                <div class="stat-value" id="totalCollateral">$0</div>
-            </div>
-            <div class="stat-card">
                 <div class="stat-label">Total P&L</div>
                 <div class="stat-value" id="totalPL">$0</div>
             </div>
@@ -827,15 +823,12 @@
                 <div class="stat-value positive" id="overallReturn">0%</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Open Positions</div>
-                <div class="stat-value" id="openPositions">0</div>
+                <div class="stat-label">Total Collateral Needed</div>
+                <div class="stat-value" id="totalCollateral">$0</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">
-                    Avg % Return (Open)
-                    <span style="display: inline-block; margin-left: 4px; width: 14px; height: 14px; background: #333; color: #fff; border-radius: 50%; text-align: center; line-height: 14px; font-size: 0.7rem; cursor: help; font-weight: bold;" title="Average % return across all open positions. Calculated as: Average of (premium collected / cash required * 100)">ⓘ</span>
-                </div>
-                <div class="stat-value positive" id="avgReturn">0%</div>
+                <div class="stat-label">Open Positions</div>
+                <div class="stat-value" id="openPositions">0</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Closed Positions</div>
@@ -958,16 +951,16 @@
             <h2 style="margin: 40px 0 20px 0; font-size: 1.8rem;">Quick Stats</h2>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                 <div class="metric-card">
-                    <div class="metric-title">Best Trade</div>
+                    <div class="metric-title">Avg Trade P&L</div>
+                    <div style="font-size: 1.5rem; font-weight: 700;" id="avgTradePL">$0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Best Trade ($)</div>
                     <div style="font-size: 1.5rem; font-weight: 700; color: #00ff88;" id="bestTrade">$0</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-title">Worst Trade</div>
+                    <div class="metric-title">Worst Trade ($)</div>
                     <div style="font-size: 1.5rem; font-weight: 700; color: #ff4444;" id="worstTrade">$0</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">Avg Trade P&L</div>
-                    <div style="font-size: 1.5rem; font-weight: 700;" id="avgTradePL">$0</div>
                 </div>
             </div>
         </div>
