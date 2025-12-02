@@ -4372,14 +4372,36 @@
 
             const avgReturn = trades.length > 0 ? (totalReturns / trades.length).toFixed(2) : 0;
             
-            // Calculate overall return: Sum of all % returns from closed groups
+            // Calculate overall return: Sum of all % returns from CLOSED groups only
             let overallReturn = 0;
+            let closedGroupsCount = 0;
+            
             tradeGroups.forEach(group => {
                 if (!group.trades || !Array.isArray(group.trades) || group.trades.length === 0) {
                     return;
                 }
                 
-                // Calculate profit for this group
+                // Check if this group is truly closed (same logic as badge count)
+                let groupTradeRef = null;
+                if (group.name && group.name.startsWith('Trade Ref: ')) {
+                    groupTradeRef = group.name.replace('Trade Ref: ', '');
+                }
+                if (!groupTradeRef && group.trades.length > 0) {
+                    groupTradeRef = group.trades[0].tradeRef;
+                }
+                
+                // Skip if group has open trades
+                if (groupTradeRef && groupTradeRef.trim()) {
+                    const hasOpenTrades = trades.some(t => 
+                        t.tradeRef && 
+                        t.tradeRef.trim() === groupTradeRef.trim()
+                    );
+                    if (hasOpenTrades) {
+                        return; // Skip this group - it's not fully closed
+                    }
+                }
+                
+                // Calculate profit for this CLOSED group
                 let groupProfit = 0;
                 group.trades.forEach(trade => {
                     const amount = trade.premium * trade.contracts * 100;
@@ -4395,8 +4417,14 @@
                 if (groupCashRequired > 0) {
                     const groupReturnPercent = (groupProfit / groupCashRequired) * 100;
                     overallReturn += groupReturnPercent;
+                    closedGroupsCount++;
                 }
             });
+            
+            // If no closed groups, show 0%
+            if (closedGroupsCount === 0) {
+                overallReturn = 0;
+            }
             
             overallReturn = overallReturn.toFixed(2);
 
