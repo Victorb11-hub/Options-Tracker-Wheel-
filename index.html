@@ -399,6 +399,40 @@
             color: #00cc6a !important;
         }
 
+        #importOptionsModal button[onclick*="importData"]:hover {
+            background: #252525 !important;
+            border-color: #00ff88 !important;
+            transform: translateY(-2px);
+        }
+
+        #importOptionsModal button[onclick*="downloadTemplate"]:hover {
+            background: #252525 !important;
+            border-color: #4488ff !important;
+            transform: translateY(-2px);
+        }
+
+        body.light-mode #importOptionsModal {
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        body.light-mode #importOptionsModal .modal-content {
+            background: #fff;
+        }
+
+        body.light-mode #importOptionsModal button[onclick*="importData"],
+        body.light-mode #importOptionsModal button[onclick*="downloadTemplate"] {
+            background: #f5f5f5;
+            color: #000;
+        }
+
+        body.light-mode #importOptionsModal button[onclick*="importData"]:hover {
+            background: #e8e8e8 !important;
+        }
+
+        body.light-mode #importOptionsModal button[onclick*="downloadTemplate"]:hover {
+            background: #e8e8e8 !important;
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -876,11 +910,8 @@
             <button onclick="exportData()" style="width: 100%; text-align: left; padding: 12px 20px; background: none; border: none; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s;">
                 <span style="font-size: 1.2rem;">📤</span> Export Data
             </button>
-            <button onclick="importData()" style="width: 100%; text-align: left; padding: 12px 20px; background: none; border: none; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s;">
+            <button onclick="showImportOptions()" style="width: 100%; text-align: left; padding: 12px 20px; background: none; border: none; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s;">
                 <span style="font-size: 1.2rem;">📥</span> Import Data
-            </button>
-            <button onclick="downloadTemplate()" style="width: 100%; text-align: left; padding: 12px 20px; background: none; border: none; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s;">
-                <span style="font-size: 1.2rem;">📋</span> Download Template
             </button>
             <div style="border-top: 1px solid #333; margin: 10px 0;"></div>
             <button onclick="logout()" style="width: 100%; text-align: left; padding: 12px 20px; background: none; border: none; color: #ff4444; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s;">
@@ -966,6 +997,60 @@
                     <div id="allocationList" class="allocation-list">
                         <!-- Will be populated by JS -->
                     </div>
+                </div>
+            </div>
+
+            <!-- Weekly Premium Collected Section -->
+            <h2 style="margin: 40px 0 20px 0; font-size: 1.8rem;">Weekly Premium Collected</h2>
+            <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
+                <label style="color: #888;">Date Range:</label>
+                <select id="weeklyRangeFilter" onchange="updateWeeklyPremium()" style="padding: 8px 12px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 4px;">
+                    <option value="4">Last 4 Weeks</option>
+                    <option value="8">Last 8 Weeks</option>
+                    <option value="12" selected>Last 12 Weeks</option>
+                    <option value="26">Last 6 Months</option>
+                    <option value="52">Last Year</option>
+                    <option value="all">All Time</option>
+                </select>
+                <label style="color: #888; margin-left: 20px;">Display:</label>
+                <select id="weeklyDisplayType" onchange="updateWeeklyPremium()" style="padding: 8px 12px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 4px;">
+                    <option value="chart">Bar Chart</option>
+                    <option value="table">Table View</option>
+                    <option value="cards">Card View</option>
+                </select>
+            </div>
+            
+            <!-- Bar Chart Display -->
+            <div id="weeklyChartView" style="display: none;">
+                <div class="metric-card" style="padding: 30px;">
+                    <div id="weeklyChart" style="min-height: 300px;"></div>
+                </div>
+            </div>
+            
+            <!-- Table Display -->
+            <div id="weeklyTableView" style="display: none;">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Week Starting</th>
+                                <th>Week Ending</th>
+                                <th>Premium Collected</th>
+                                <th>Number of Trades</th>
+                                <th>Avg per Trade</th>
+                            </tr>
+                        </thead>
+                        <tbody id="weeklyTableBody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Card Display -->
+            <div id="weeklyCardsView" style="display: none;">
+                <div id="weeklyCardsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+                    <!-- Populated by JS -->
                 </div>
             </div>
 
@@ -1500,6 +1585,40 @@
             <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
                 <button class="secondary" onclick="closeAccountModal()">Cancel</button>
                 <button onclick="saveNewAccount()">Add Account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Options Modal -->
+    <div class="modal" id="importOptionsModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <div class="modal-title">Import Data</div>
+                <button class="close-btn" onclick="closeImportOptionsModal()">×</button>
+            </div>
+            <div style="padding: 20px 0;">
+                <p style="color: #888; margin-bottom: 30px; text-align: center;">
+                    Choose an option to import your trades
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <button onclick="importData(); closeImportOptionsModal();" style="width: 100%; padding: 20px; background: #1a1a1a; border: 2px solid #00ff88; color: #fff; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 15px; transition: all 0.2s; font-size: 1rem;">
+                        <span style="font-size: 2rem;">📥</span>
+                        <div style="text-align: left; flex: 1;">
+                            <div style="font-weight: 600; margin-bottom: 5px;">Import File</div>
+                            <div style="font-size: 0.85rem; color: #888;">Upload Excel, CSV, or JSON file</div>
+                        </div>
+                    </button>
+                    <button onclick="downloadTemplate(); closeImportOptionsModal();" style="width: 100%; padding: 20px; background: #1a1a1a; border: 2px solid #4488ff; color: #fff; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 15px; transition: all 0.2s; font-size: 1rem;">
+                        <span style="font-size: 2rem;">📋</span>
+                        <div style="text-align: left; flex: 1;">
+                            <div style="font-weight: 600; margin-bottom: 5px;">Download Import Template</div>
+                            <div style="font-size: 0.85rem; color: #888;">Get Excel template with examples</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="secondary" onclick="closeImportOptionsModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -2087,6 +2206,17 @@
 
         function closeTradeModal() {
             document.getElementById('tradeModal').classList.remove('active');
+        }
+
+        function showImportOptions() {
+            // Close settings menu
+            document.getElementById('settingsMenu').classList.add('hidden');
+            // Open import options modal
+            document.getElementById('importOptionsModal').classList.add('active');
+        }
+
+        function closeImportOptionsModal() {
+            document.getElementById('importOptionsModal').classList.remove('active');
         }
 
         function toggleSettingsMenu() {
@@ -4460,10 +4590,260 @@
                 document.getElementById('avgTradePL').textContent = `$${avgTradePL}`;
                 document.getElementById('avgTradePL').className = parseFloat(avgTradePL) >= 0 ? 'positive-value' : 'negative-value';
                 
+                // Update weekly premium section
+                updateWeeklyPremium();
 
             } catch (error) {
                 console.error('Error in updateDashboardMetrics:', error);
             }
+        }
+
+        function updateWeeklyPremium() {
+            try {
+                const weeklyData = calculateWeeklyPremium();
+                const displayType = document.getElementById('weeklyDisplayType').value;
+                
+                // Hide all views
+                document.getElementById('weeklyChartView').style.display = 'none';
+                document.getElementById('weeklyTableView').style.display = 'none';
+                document.getElementById('weeklyCardsView').style.display = 'none';
+                
+                // Show selected view
+                if (displayType === 'chart') {
+                    document.getElementById('weeklyChartView').style.display = 'block';
+                    renderWeeklyChart(weeklyData);
+                } else if (displayType === 'table') {
+                    document.getElementById('weeklyTableView').style.display = 'block';
+                    renderWeeklyTable(weeklyData);
+                } else if (displayType === 'cards') {
+                    document.getElementById('weeklyCardsView').style.display = 'block';
+                    renderWeeklyCards(weeklyData);
+                }
+            } catch (error) {
+                console.error('Error in updateWeeklyPremium:', error);
+            }
+        }
+
+        function getWeekStart(date) {
+            // Get Monday of the week containing this date
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+            const monday = new Date(d.setDate(diff));
+            monday.setHours(0, 0, 0, 0);
+            return monday;
+        }
+
+        function getWeekEnd(date) {
+            // Get Friday of the week containing this date
+            const monday = getWeekStart(date);
+            const friday = new Date(monday);
+            friday.setDate(monday.getDate() + 4); // Monday + 4 = Friday
+            friday.setHours(23, 59, 59, 999);
+            return friday;
+        }
+
+        function formatWeekRange(weekStart) {
+            const weekEnd = getWeekEnd(weekStart);
+            const formatDate = (d) => {
+                const month = d.getMonth() + 1;
+                const day = d.getDate();
+                return `${month}/${day}`;
+            };
+            return `${formatDate(weekStart)} - ${formatDate(weekEnd)}`;
+        }
+
+        function calculateWeeklyPremium() {
+            const weeklyPremiums = {}; // Key: week start date string, Value: {premium, trades, weekStart, weekEnd}
+            
+            // Process closed trades
+            closedTrades.forEach(trade => {
+                if (trade.isClosingTrade) return; // Skip closing leg entries
+                
+                const premium = trade.premium * trade.contracts * 100;
+                const closingCost = (trade.closePrice || trade.closingPremium || 0) * trade.contracts * 100;
+                const netPremium = premium - closingCost;
+                
+                let targetWeek;
+                
+                if (trade.dateClosed) {
+                    // Trade was closed early - assign to closing week
+                    targetWeek = getWeekStart(trade.dateClosed);
+                } else if (trade.expDate) {
+                    // Trade held to expiration - assign to exp week
+                    targetWeek = getWeekStart(trade.expDate);
+                } else {
+                    return; // Skip if no date info
+                }
+                
+                const weekKey = targetWeek.toISOString();
+                if (!weeklyPremiums[weekKey]) {
+                    weeklyPremiums[weekKey] = {
+                        premium: 0,
+                        trades: 0,
+                        weekStart: targetWeek,
+                        weekEnd: getWeekEnd(targetWeek)
+                    };
+                }
+                
+                weeklyPremiums[weekKey].premium += netPremium;
+                weeklyPremiums[weekKey].trades += 1;
+            });
+            
+            // Process open trades
+            trades.forEach(trade => {
+                if (!trade.expDate) return;
+                
+                let premiumToAdd = 0;
+                
+                if (trade.isRolled) {
+                    // For rolled positions, use the roll credit
+                    const rollCredit = calculateRollCredit(trade);
+                    if (rollCredit !== null) {
+                        premiumToAdd = rollCredit;
+                    } else {
+                        // Fallback to premium if roll credit can't be calculated
+                        premiumToAdd = trade.premium * trade.contracts * 100;
+                    }
+                } else {
+                    // Regular open position - use full premium
+                    premiumToAdd = trade.premium * trade.contracts * 100;
+                }
+                
+                const targetWeek = getWeekStart(trade.expDate);
+                const weekKey = targetWeek.toISOString();
+                
+                if (!weeklyPremiums[weekKey]) {
+                    weeklyPremiums[weekKey] = {
+                        premium: 0,
+                        trades: 0,
+                        weekStart: targetWeek,
+                        weekEnd: getWeekEnd(targetWeek)
+                    };
+                }
+                
+                weeklyPremiums[weekKey].premium += premiumToAdd;
+                weeklyPremiums[weekKey].trades += 1;
+            });
+            
+            // Convert to array and sort by week
+            let weeksArray = Object.values(weeklyPremiums).sort((a, b) => 
+                b.weekStart - a.weekStart // Newest first
+            );
+            
+            // Apply date range filter
+            const rangeFilter = document.getElementById('weeklyRangeFilter').value;
+            if (rangeFilter !== 'all') {
+                const weeksToShow = parseInt(rangeFilter);
+                weeksArray = weeksArray.slice(0, weeksToShow);
+            }
+            
+            // Reverse for chronological display
+            return weeksArray.reverse();
+        }
+
+        function renderWeeklyChart(weeklyData) {
+            const chartContainer = document.getElementById('weeklyChart');
+            
+            if (weeklyData.length === 0) {
+                chartContainer.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">No data available for selected range</div>';
+                return;
+            }
+            
+            const maxPremium = Math.max(...weeklyData.map(w => w.premium));
+            const chartHeight = 250;
+            
+            let html = '<div style="display: flex; align-items: flex-end; justify-content: space-around; height: ' + chartHeight + 'px; gap: 10px; padding: 20px 0;">';
+            
+            weeklyData.forEach(week => {
+                const barHeight = maxPremium > 0 ? (week.premium / maxPremium) * (chartHeight - 50) : 0;
+                const color = week.premium >= 0 ? '#00ff88' : '#ff4444';
+                const weekLabel = formatWeekRange(week.weekStart);
+                
+                html += `
+                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                        <div style="font-size: 0.9rem; font-weight: 600; color: ${color};">
+                            $${week.premium.toFixed(0)}
+                        </div>
+                        <div style="width: 100%; background: ${color}; height: ${Math.abs(barHeight)}px; border-radius: 4px 4px 0 0; transition: all 0.3s; cursor: pointer;" title="${week.trades} trades">
+                        </div>
+                        <div style="font-size: 0.75rem; color: #666; text-align: center; writing-mode: horizontal-tb; transform: rotate(-45deg); white-space: nowrap; margin-top: 20px;">
+                            ${weekLabel}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            chartContainer.innerHTML = html;
+        }
+
+        function renderWeeklyTable(weeklyData) {
+            const tbody = document.getElementById('weeklyTableBody');
+            
+            if (weeklyData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #666; padding: 40px;">No data available for selected range</td></tr>';
+                return;
+            }
+            
+            // Calculate totals
+            const totalPremium = weeklyData.reduce((sum, w) => sum + w.premium, 0);
+            const totalTrades = weeklyData.reduce((sum, w) => sum + w.trades, 0);
+            
+            tbody.innerHTML = weeklyData.map(week => {
+                const avgPerTrade = week.trades > 0 ? week.premium / week.trades : 0;
+                const weekLabel = formatWeekRange(week.weekStart);
+                const parts = weekLabel.split(' - ');
+                
+                return `
+                    <tr>
+                        <td>${parts[0]}</td>
+                        <td>${parts[1]}</td>
+                        <td class="${week.premium >= 0 ? 'positive-value' : 'negative-value'}" style="font-weight: 600;">
+                            $${week.premium.toFixed(2)}
+                        </td>
+                        <td>${week.trades}</td>
+                        <td>$${avgPerTrade.toFixed(2)}</td>
+                    </tr>
+                `;
+            }).join('') + `
+                <tr style="background: #1a1a1a; font-weight: bold; border-top: 2px solid #00ff88;">
+                    <td colspan="2" style="text-align: right;">TOTALS:</td>
+                    <td class="${totalPremium >= 0 ? 'positive-value' : 'negative-value'}">
+                        $${totalPremium.toFixed(2)}
+                    </td>
+                    <td>${totalTrades}</td>
+                    <td>$${(totalPremium / totalTrades).toFixed(2)}</td>
+                </tr>
+            `;
+        }
+
+        function renderWeeklyCards(weeklyData) {
+            const container = document.getElementById('weeklyCardsContainer');
+            
+            if (weeklyData.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #666; padding: 40px; grid-column: 1/-1;">No data available for selected range</div>';
+                return;
+            }
+            
+            container.innerHTML = weeklyData.map(week => {
+                const weekLabel = formatWeekRange(week.weekStart);
+                const avgPerTrade = week.trades > 0 ? week.premium / week.trades : 0;
+                const color = week.premium >= 0 ? '#00ff88' : '#ff4444';
+                
+                return `
+                    <div class="metric-card" style="border-left: 4px solid ${color};">
+                        <div style="font-size: 0.85rem; color: #888; margin-bottom: 8px;">${weekLabel}</div>
+                        <div style="font-size: 2rem; font-weight: 700; color: ${color}; margin-bottom: 10px;">
+                            $${week.premium.toFixed(0)}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #666;">
+                            ${week.trades} trade${week.trades !== 1 ? 's' : ''}<br>
+                            <span style="color: #888;">Avg: $${avgPerTrade.toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function toggleTheme() {
