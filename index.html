@@ -2540,7 +2540,23 @@
             }
             
             const premiumCollected = trade.premium * trade.contracts * 100;
-            const closingCost = (trade.closingPremium || trade.closePrice || 0) * trade.contracts * 100;
+            let closingCost = (trade.closingPremium || trade.closePrice || 0) * trade.contracts * 100;
+            
+            // For closed SELL trades without a closePrice, try to find the matching BUY trade
+            if (trade.action === 'sell' && trade.status === 'closed' && closingCost === 0 && trade.tradeRef) {
+                // Find the BUY trade with isClosingTrade that matches this trade
+                const buybackTrade = closedTrades.find(t => 
+                    t.isClosingTrade === true &&
+                    t.action === 'buy' &&
+                    t.tradeRef === trade.tradeRef &&
+                    t.symbol === trade.symbol &&
+                    Math.abs(new Date(t.dateOpened) - new Date(trade.dateClosed || trade.dateOpened)) < 86400000 // Within 1 day
+                );
+                
+                if (buybackTrade) {
+                    closingCost = buybackTrade.premium * buybackTrade.contracts * 100;
+                }
+            }
             
             if (trade.action === 'sell') {
                 // For closed positions, calculate actual P&L
