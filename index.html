@@ -2433,21 +2433,23 @@
                 return null;
             }
             
-            // Find the most recent closed trades with same Trade Ref
-            const relatedClosedTrades = closedTrades
-                .filter(t => t.tradeRef === trade.tradeRef && !t.isClosingTrade)
-                .sort((a, b) => new Date(b.dateClosed || b.dateOpened) - new Date(a.dateClosed || a.dateOpened));
+            // Find the most recent BUY (closing) trade with same Trade Ref
+            // When you roll, the buyback is a separate BUY trade with isClosingTrade flag
+            const buybackTrade = closedTrades
+                .filter(t => 
+                    t.tradeRef === trade.tradeRef && 
+                    t.action === 'buy' && 
+                    t.isClosingTrade === true
+                )
+                .sort((a, b) => new Date(b.dateClosed || b.dateOpened) - new Date(a.dateClosed || a.dateOpened))[0];
             
-            if (relatedClosedTrades.length === 0) {
+            if (!buybackTrade) {
                 return null;
             }
             
-            // Get the most recent closed trade (the one we rolled from)
-            const previousTrade = relatedClosedTrades[0];
-            
-            // Calculate: New Premium (current trade) - Buyback Cost (previous trade closing)
+            // Calculate: New Premium (current SELL trade) - Buyback Cost (previous BUY trade)
             const newPremium = trade.premium * trade.contracts * 100;
-            const buybackCost = (previousTrade.closePrice || previousTrade.closingPremium || 0) * previousTrade.contracts * 100;
+            const buybackCost = buybackTrade.premium * buybackTrade.contracts * 100;
             const credit = newPremium - buybackCost;
             
             return credit;
