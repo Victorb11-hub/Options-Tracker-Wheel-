@@ -322,6 +322,34 @@
             border-bottom-color: #fff;
         }
 
+        .tab-badge {
+            display: inline-block;
+            background: #333;
+            color: #888;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 6px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .tab.active .tab-badge {
+            background: #00ff88;
+            color: #000;
+        }
+
+        body.light-mode .tab-badge {
+            background: #e0e0e0;
+            color: #666;
+        }
+
+        body.light-mode .tab.active .tab-badge {
+            background: #00cc6a;
+            color: #fff;
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -807,10 +835,10 @@
 
         <div class="tabs">
             <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
-            <button class="tab" onclick="switchTab('open')">Open Positions</button>
-            <button class="tab" onclick="switchTab('groups')">Closed Groups</button>
+            <button class="tab" onclick="switchTab('open')">Open Positions <span class="tab-badge" id="tabOpenCount">0</span></button>
+            <button class="tab" onclick="switchTab('groups')">Closed Groups <span class="tab-badge" id="tabGroupsCount">0</span></button>
             <button class="tab" onclick="switchTab('all')">All Trades</button>
-            <button class="tab" onclick="switchTab('stock')">Stock Positions</button>
+            <button class="tab" onclick="switchTab('stock')">Stock Positions <span class="tab-badge" id="tabStockCount">0</span></button>
         </div>
 
         <div class="stats-grid">
@@ -840,7 +868,7 @@
             <div class="form-grid">
                 <div class="form-group">
                     <label>Symbol</label>
-                    <input type="text" id="symbol" placeholder="AAPL" style="text-transform: uppercase;">
+                    <input type="text" id="symbol" placeholder="Enter symbol..." style="text-transform: uppercase;">
                 </div>
                 <div class="form-group">
                     <label>Contracts</label>
@@ -4111,12 +4139,29 @@
             if (currentTab === 'dashboard') {
                 updateDashboardMetrics();
             }
+            
+            // Update tab badges
+            updateTabBadges();
             } catch (error) {
                 console.error('Error in updateStats:', error);
                 console.log('trades:', trades);
                 console.log('closedTrades:', closedTrades);
                 console.log('stockPositions:', stockPositions);
             }
+        }
+
+        function updateTabBadges() {
+            const openCount = trades.length;
+            const stockCount = stockPositions.length;
+            const groupsCount = tradeGroups.length;
+            
+            const tabOpenBadge = document.getElementById('tabOpenCount');
+            const tabStockBadge = document.getElementById('tabStockCount');
+            const tabGroupsBadge = document.getElementById('tabGroupsCount');
+            
+            if (tabOpenBadge) tabOpenBadge.textContent = openCount;
+            if (tabStockBadge) tabStockBadge.textContent = stockCount;
+            if (tabGroupsBadge) tabGroupsBadge.textContent = groupsCount;
         }
 
         function updateDashboardMetrics() {
