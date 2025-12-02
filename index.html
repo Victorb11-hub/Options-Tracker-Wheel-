@@ -350,6 +350,55 @@
             color: #fff;
         }
 
+        .settings-dropdown {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            min-width: 220px;
+            padding: 10px 0;
+        }
+
+        .settings-dropdown button:hover {
+            background: #252525 !important;
+        }
+
+        body.light-mode .settings-dropdown {
+            background: #fff;
+            border-color: #ddd;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        body.light-mode .settings-dropdown button {
+            color: #000 !important;
+        }
+
+        body.light-mode .settings-dropdown button:hover {
+            background: #f5f5f5 !important;
+        }
+
+        body.light-mode .settings-dropdown button[onclick*="logout"] {
+            color: #ff4444 !important;
+        }
+
+        #settingsMenuBtn:hover {
+            background: #1a1a1a !important;
+            border-color: #00ff88 !important;
+            color: #00ff88 !important;
+        }
+
+        body.light-mode #settingsMenuBtn {
+            border-color: #ddd;
+            color: #666;
+        }
+
+        body.light-mode #settingsMenuBtn:hover {
+            background: #f5f5f5 !important;
+            border-color: #00cc6a !important;
+            color: #00cc6a !important;
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -759,21 +808,7 @@
         }
 
         .logout-button {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 8px 16px;
-            background: #ff4444;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            z-index: 1000;
-        }
-
-        .logout-button:hover {
-            background: #cc0000;
+            display: none;
         }
 
         .rolled-badge {
@@ -829,16 +864,48 @@
         <button onclick="logout()" class="logout-button">Logout</button>
         <button onclick="toggleTheme()" class="theme-toggle" id="themeToggle"></button>
         
+        <!-- Hamburger Menu - Fixed Top Right -->
+        <button onclick="toggleSettingsMenu()" id="settingsMenuBtn" style="position: fixed; top: 20px; right: 20px; z-index: 1001; background: none; border: 1px solid #333; color: #888; padding: 12px 14px; border-radius: 6px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; transition: all 0.2s;">
+            <span style="width: 22px; height: 2px; background: currentColor; display: block;"></span>
+            <span style="width: 22px; height: 2px; background: currentColor; display: block;"></span>
+            <span style="width: 22px; height: 2px; background: currentColor; display: block;"></span>
+        </button>
+
+        <!-- Settings Menu Dropdown -->
+        <div id="settingsMenu" class="settings-dropdown hidden" style="position: fixed; top: 70px; right: 20px;">
+            <button onclick="exportData()" style="width: 100%; text-align: left; padding: 12px 20px; background: none; border: none; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s;">
+                <span style="font-size: 1.2rem;">📤</span> Export Data
+            </button>
+            <button onclick="importData()" style="width: 100%; text-align: left; padding: 12px 20px; background: none; border: none; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s;">
+                <span style="font-size: 1.2rem;">📥</span> Import Data
+            </button>
+            <button onclick="downloadTemplate()" style="width: 100%; text-align: left; padding: 12px 20px; background: none; border: none; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s;">
+                <span style="font-size: 1.2rem;">📋</span> Download Template
+            </button>
+            <div style="border-top: 1px solid #333; margin: 10px 0;"></div>
+            <button onclick="logout()" style="width: 100%; text-align: left; padding: 12px 20px; background: none; border: none; color: #ff4444; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s;">
+                <span style="font-size: 1.2rem;">🚪</span> Logout
+            </button>
+        </div>
+        
     <div class="container">
         <h1>Options Wheel Strategy Tracker</h1>
         <p class="subtitle">Track your puts and calls with automatic calculations</p>
 
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
-            <button class="tab" onclick="switchTab('open')">Open Positions <span class="tab-badge" id="tabOpenCount">0</span></button>
-            <button class="tab" onclick="switchTab('groups')">Closed Groups <span class="tab-badge" id="tabGroupsCount">0</span></button>
-            <button class="tab" onclick="switchTab('all')">All Trades</button>
-            <button class="tab" onclick="switchTab('stock')">Stock Positions <span class="tab-badge" id="tabStockCount">0</span></button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; position: relative;">
+            <div class="tabs" style="border-bottom: none; margin-bottom: 0; flex: 1;">
+                <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
+                <button class="tab" onclick="switchTab('open')">Open Positions <span class="tab-badge" id="tabOpenCount">0</span></button>
+                <button class="tab" onclick="switchTab('groups')">Closed Groups <span class="tab-badge" id="tabGroupsCount">0</span></button>
+                <button class="tab" onclick="switchTab('all')">All Trades</button>
+                <button class="tab" onclick="switchTab('stock')">Stock Positions <span class="tab-badge" id="tabStockCount">0</span></button>
+            </div>
+            <div style="display: flex; gap: 10px; padding-bottom: 12px; align-items: center;">
+                <button onclick="openTradeModal()" style="background: #00ff88; color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                    <span style="font-size: 1.2rem; line-height: 1;">+</span>
+                    New Trade
+                </button>
+            </div>
         </div>
 
         <div class="stats-grid">
@@ -864,82 +931,7 @@
             </div>
         </div>
 
-        <div class="controls">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>Symbol</label>
-                    <input type="text" id="symbol" placeholder="Enter symbol..." style="text-transform: uppercase;">
-                </div>
-                <div class="form-group">
-                    <label>Contracts</label>
-                    <input type="number" id="contracts" placeholder="1" value="1">
-                </div>
-                <div class="form-group">
-                    <label>Strike</label>
-                    <input type="number" id="strike" placeholder="150.00" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label>Premium</label>
-                    <input type="number" id="premium" placeholder="2.50" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label>Action</label>
-                    <select id="action">
-                        <option value="sell">Sell</option>
-                        <option value="buy">Buy</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Type</label>
-                    <select id="type">
-                        <option value="put">Put</option>
-                        <option value="call">Call</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Date Opened</label>
-                    <input type="date" id="dateOpened">
-                </div>
-                <div class="form-group">
-                    <label>Exp Date</label>
-                    <input type="date" id="expDate">
-                </div>
-                <div class="form-group">
-                    <label>Price at Action</label>
-                    <input type="number" id="priceAtAction" placeholder="152.50" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label>Info/Notes</label>
-                    <input type="text" id="info" placeholder="Optional notes">
-                </div>
-                <div class="form-group">
-                    <label>Trade Ref #</label>
-                    <input type="text" id="tradeRef" placeholder="e.g., TSLA-001">
-                    <div id="lastRefDisplay" style="margin-top: 5px; padding: 5px 8px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; font-size: 0.85rem; color: #00ff88;">
-                        Last Ref # used: <span id="lastRefValue" style="font-weight: bold;">None</span>
-                        <span style="display: inline-block; margin-left: 8px; width: 14px; height: 14px; background: #333; color: #fff; border-radius: 50%; text-align: center; line-height: 14px; font-size: 0.7rem; cursor: help; font-weight: bold;" title="Use number order (1, 2, 3, 4...)">ⓘ</span>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Account</label>
-                    <select id="account">
-                        <option value="">Select Account...</option>
-                        <option value="Main">Main</option>
-                        <option value="IRA">IRA</option>
-                        <option value="Roth IRA">Roth IRA</option>
-                    </select>
-                    <button type="button" onclick="addNewAccount()" style="margin-top: 5px; padding: 4px 8px; font-size: 0.9rem;">+ Add Account</button>
-                </div>
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="addTrade()">Add Position</button>
-                <button class="secondary" onclick="clearForm()">Clear</button>
-                <button class="secondary" onclick="exportData()">Export Data</button>
-                <button class="secondary" onclick="importData()">Import Data</button>
-                <button class="secondary" onclick="downloadTemplate()">📥 Download Template</button>
-                <button id="undoButton" class="secondary" onclick="undoDelete()" style="display: none; background: #ff8844; color: #000;">Undo Delete</button>
-            </div>
-        </div>
+        <!-- Controls removed - now in modal -->
 
         <div class="tab-content active" id="dashboardTab">
             <h2 style="margin-bottom: 20px; font-size: 1.8rem;">Performance Metrics</h2>
@@ -1510,6 +1502,87 @@
         </div>
     </div>
 
+    <!-- New Trade Modal -->
+    <div class="modal" id="tradeModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <div class="modal-title">Add New Position</div>
+                <button class="close-btn" onclick="closeTradeModal()">×</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Symbol</label>
+                    <input type="text" id="symbol" placeholder="Enter symbol..." style="text-transform: uppercase;">
+                </div>
+                <div class="form-group">
+                    <label>Contracts</label>
+                    <input type="number" id="contracts" placeholder="1" value="1">
+                </div>
+                <div class="form-group">
+                    <label>Strike</label>
+                    <input type="number" id="strike" placeholder="150.00" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Premium</label>
+                    <input type="number" id="premium" placeholder="2.50" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Action</label>
+                    <select id="action">
+                        <option value="sell">Sell</option>
+                        <option value="buy">Buy</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="type">
+                        <option value="put">Put</option>
+                        <option value="call">Call</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date Opened</label>
+                    <input type="date" id="dateOpened">
+                </div>
+                <div class="form-group">
+                    <label>Exp Date</label>
+                    <input type="date" id="expDate">
+                </div>
+                <div class="form-group">
+                    <label>Price at Action</label>
+                    <input type="number" id="priceAtAction" placeholder="152.50" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Info/Notes</label>
+                    <input type="text" id="info" placeholder="Optional notes">
+                </div>
+                <div class="form-group">
+                    <label>Trade Ref #</label>
+                    <input type="text" id="tradeRef" placeholder="e.g., TSLA-001">
+                    <div id="lastRefDisplay" style="margin-top: 5px; padding: 5px 8px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; font-size: 0.85rem; color: #00ff88;">
+                        Last Ref # used: <span id="lastRefValue" style="font-weight: bold;">None</span>
+                        <span style="display: inline-block; margin-left: 8px; width: 14px; height: 14px; background: #333; color: #fff; border-radius: 50%; text-align: center; line-height: 14px; font-size: 0.7rem; cursor: help; font-weight: bold;" title="Use number order (1, 2, 3, 4...)">ⓘ</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Account</label>
+                    <select id="account">
+                        <option value="">Select Account...</option>
+                        <option value="Main">Main</option>
+                        <option value="IRA">IRA</option>
+                        <option value="Roth IRA">Roth IRA</option>
+                    </select>
+                    <button type="button" onclick="addNewAccount()" style="margin-top: 5px; padding: 4px 8px; font-size: 0.9rem;">+ Add Account</button>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="addTrade()">Add Position</button>
+                <button class="secondary" onclick="clearForm()">Clear</button>
+                <button class="secondary" onclick="closeTradeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal" id="groupModal">
         <div class="modal-content" style="max-width: 1000px;">
             <div class="modal-header">
@@ -2000,6 +2073,29 @@
             document.getElementById('closeDate').value = today;
         }
 
+        function openTradeModal() {
+            document.getElementById('tradeModal').classList.add('active');
+            setTodayDate();
+        }
+
+        function closeTradeModal() {
+            document.getElementById('tradeModal').classList.remove('active');
+        }
+
+        function toggleSettingsMenu() {
+            const menu = document.getElementById('settingsMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Close settings menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('settingsMenu');
+            const btn = document.getElementById('settingsMenuBtn');
+            if (menu && btn && !menu.contains(event.target) && !btn.contains(event.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
         function switchTab(tabName) {
             currentTab = tabName;
             
@@ -2126,6 +2222,7 @@
                     updateStats();
                     updateLastRefDisplay();
                     clearForm();
+                    closeTradeModal();
                     alert('Position closed and grouped automatically!');
                     return;
                 }
@@ -2156,6 +2253,7 @@
             updateStats();
             updateLastRefDisplay();
             clearForm();
+            closeTradeModal();
         }
 
         function clearForm() {
