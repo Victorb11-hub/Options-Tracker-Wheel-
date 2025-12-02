@@ -908,6 +908,7 @@
                 <button class="secondary" onclick="clearForm()">Clear</button>
                 <button class="secondary" onclick="exportData()">Export Data</button>
                 <button class="secondary" onclick="importData()">Import Data</button>
+                <button class="secondary" onclick="downloadTemplate()">📥 Download Template</button>
                 <button id="undoButton" class="secondary" onclick="undoDelete()" style="display: none; background: #ff8844; color: #000;">Undo Delete</button>
             </div>
         </div>
@@ -5627,7 +5628,191 @@
             updateStats();
         }
 
+        function downloadTemplate() {
+            // Create sample data for the template
+            const templateData = [
+                {
+                    'Symbol': 'AAPL',
+                    'Contracts': 1,
+                    'Strike': 150.00,
+                    'Premium': 2.50,
+                    'Action': 'sell',
+                    'Type': 'put',
+                    'Date Opened': '2024-12-01',
+                    'Exp Date': '2024-12-15',
+                    'Price At Action': 152.50,
+                    'Info': 'Opening position',
+                    'Trade Ref': '1',
+                    'Account': 'Main'
+                },
+                {
+                    'Symbol': 'AAPL',
+                    'Contracts': 1,
+                    'Strike': 150.00,
+                    'Premium': 0.50,
+                    'Action': 'buy',
+                    'Type': 'put',
+                    'Date Opened': '2024-12-10',
+                    'Exp Date': '2024-12-15',
+                    'Price At Action': 148.00,
+                    'Info': 'Closing position - profit',
+                    'Trade Ref': '1',
+                    'Account': 'Main'
+                },
+                {
+                    'Symbol': 'TSLA',
+                    'Contracts': 2,
+                    'Strike': 220.00,
+                    'Premium': 3.00,
+                    'Action': 'sell',
+                    'Type': 'put',
+                    'Date Opened': '2024-11-20',
+                    'Exp Date': '2024-12-20',
+                    'Price At Action': 225.00,
+                    'Info': 'Initial position',
+                    'Trade Ref': '2',
+                    'Account': 'IRA'
+                },
+                {
+                    'Symbol': 'TSLA',
+                    'Contracts': 2,
+                    'Strike': 225.00,
+                    'Premium': 1.50,
+                    'Action': 'roll',
+                    'Type': 'put',
+                    'Date Opened': '2024-12-05',
+                    'Exp Date': '2024-12-27',
+                    'Price At Action': 223.00,
+                    'Info': 'Rolled up and out',
+                    'Trade Ref': '2',
+                    'Account': 'IRA'
+                },
+                {
+                    'Symbol': 'NVDA',
+                    'Contracts': 1,
+                    'Strike': 155.00,
+                    'Premium': 0.99,
+                    'Action': 'sell',
+                    'Type': 'put',
+                    'Date Opened': '2024-11-25',
+                    'Exp Date': '2024-12-05',
+                    'Price At Action': 172.65,
+                    'Info': 'Quick trade',
+                    'Trade Ref': '3',
+                    'Account': 'Roth IRA'
+                },
+                {
+                    'Symbol': 'NVDA',
+                    'Contracts': 1,
+                    'Strike': 155.00,
+                    'Premium': 0.22,
+                    'Action': 'buy',
+                    'Type': 'put',
+                    'Date Opened': '2024-11-26',
+                    'Exp Date': '2024-12-05',
+                    'Price At Action': 168.50,
+                    'Info': 'Closed for 80% profit in one day',
+                    'Trade Ref': '3',
+                    'Account': 'Roth IRA'
+                }
+            ];
+
+            // Load SheetJS if not already loaded
+            if (typeof XLSX === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                document.head.appendChild(script);
+                
+                script.onload = () => {
+                    generateAndDownloadTemplate(templateData);
+                };
+                script.onerror = () => {
+                    alert('Failed to load Excel library. Please try again.');
+                };
+            } else {
+                generateAndDownloadTemplate(templateData);
+            }
+        }
+
+        function generateAndDownloadTemplate(templateData) {
+            // Create worksheet from data
+            const worksheet = XLSX.utils.json_to_sheet(templateData);
+            
+            // Set column widths
+            worksheet['!cols'] = [
+                { wch: 10 },  // Symbol
+                { wch: 10 },  // Contracts
+                { wch: 10 },  // Strike
+                { wch: 10 },  // Premium
+                { wch: 10 },  // Action
+                { wch: 8 },   // Type
+                { wch: 15 },  // Date Opened
+                { wch: 15 },  // Exp Date
+                { wch: 15 },  // Price At Action
+                { wch: 30 },  // Info
+                { wch: 12 },  // Trade Ref
+                { wch: 12 }   // Account
+            ];
+            
+            // Create workbook
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Trades');
+            
+            // Add instructions sheet
+            const instructions = [
+                ['IMPORT TEMPLATE INSTRUCTIONS'],
+                [''],
+                ['Required Columns:'],
+                ['- Symbol: Stock ticker (e.g., AAPL, TSLA)'],
+                ['- Contracts: Number of contracts (e.g., 1, 2)'],
+                ['- Strike: Strike price (e.g., 150.00)'],
+                ['- Premium: Premium per share (e.g., 2.50)'],
+                ['- Action: sell, buy, or roll'],
+                ['- Type: put or call'],
+                ['- Date Opened: Format YYYY-MM-DD (e.g., 2024-12-01)'],
+                ['- Exp Date: Format YYYY-MM-DD (e.g., 2024-12-15)'],
+                [''],
+                ['Optional Columns:'],
+                ['- Price At Action: Stock price when trade opened'],
+                ['- Info: Notes about the trade'],
+                ['- Trade Ref: Reference number to link trades (e.g., 1, 2, 3)'],
+                ['- Account: Account name (e.g., Main, IRA, Roth IRA)'],
+                [''],
+                ['Action Types:'],
+                ['- sell: Opens a new position'],
+                ['- buy: Closes a matching sell position (same Trade Ref + Strike)'],
+                ['- roll: Closes old position AND opens new position (same Trade Ref)'],
+                [''],
+                ['Examples in the "Trades" sheet:'],
+                ['1. AAPL - Sell put, then buy it back (closed position)'],
+                ['2. TSLA - Sell put, then roll to new strike/date (keeps same Trade Ref)'],
+                ['3. NVDA - Sell put, then buy back for quick profit'],
+                [''],
+                ['Tips:'],
+                ['- Use Trade Ref numbers to link related trades (1, 2, 3, etc.)'],
+                ['- Rows are processed in order, so put trades chronologically'],
+                ['- Delete these example rows and add your own trades'],
+                ['- Save as .xlsx or .csv format']
+            ];
+            
+            const instructionsSheet = XLSX.utils.aoa_to_sheet(instructions);
+            instructionsSheet['!cols'] = [{ wch: 70 }];
+            XLSX.utils.book_append_sheet(workbook, instructionsSheet, 'Instructions');
+            
+            // Download file
+            XLSX.writeFile(workbook, 'options_tracker_template.xlsx');
+        }
+
         function exportData() {
+            // Check if user wants Excel or JSON
+            if (confirm('Export as Excel?\n\nClick OK for Excel (.xlsx)\nClick Cancel for JSON (.json)')) {
+                exportToExcel();
+            } else {
+                exportToJSON();
+            }
+        }
+
+        function exportToJSON() {
             const data = {
                 openTrades: trades,
                 closedTrades: closedTrades,
@@ -5644,37 +5829,624 @@
             link.click();
         }
 
+        function exportToExcel() {
+            // Load SheetJS if not already loaded
+            if (typeof XLSX === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                document.head.appendChild(script);
+                
+                script.onload = () => {
+                    generateExcelExport();
+                };
+                script.onerror = () => {
+                    alert('Failed to load Excel library. Exporting as JSON instead.');
+                    exportToJSON();
+                };
+            } else {
+                generateExcelExport();
+            }
+        }
+
+        function generateExcelExport() {
+            const workbook = XLSX.utils.book_new();
+            
+            // === OPEN TRADES SHEET ===
+            const openTradesData = trades.map(trade => {
+                const cashRequired = calculateCashRequired(trade);
+                const returnPercent = calculateReturnPercent(trade);
+                const otm = calculateOTM(trade);
+                const pl = calculatePL(trade);
+                
+                return {
+                    'Status': 'OPEN',
+                    'Symbol': trade.symbol,
+                    'Contracts': trade.contracts,
+                    'Strike': trade.strike,
+                    'Premium': trade.premium,
+                    'Action': trade.action,
+                    'Type': trade.type,
+                    'Date Opened': trade.dateOpened,
+                    'Exp Date': trade.expDate,
+                    'Days to Exp': calculateDaysToExpiration(trade.expDate),
+                    'Cash Required': cashRequired,
+                    'Return %': parseFloat(returnPercent),
+                    'Price @ Action': trade.priceAtAction || 0,
+                    '% OTM': parseFloat(otm),
+                    'P&L': pl,
+                    'Info': trade.info || '',
+                    'Trade Ref': trade.tradeRef || '',
+                    'Account': trade.account || '',
+                    'Is Rolled': trade.isRolled ? 'Yes' : 'No',
+                    'Is Covered Call': trade.isCoveredCall ? 'Yes' : 'No'
+                };
+            });
+            
+            if (openTradesData.length > 0) {
+                const openSheet = XLSX.utils.json_to_sheet(openTradesData);
+                openSheet['!cols'] = [
+                    { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+                    { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 10 },
+                    { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 10 }, { wch: 12 },
+                    { wch: 30 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 12 }
+                ];
+                XLSX.utils.book_append_sheet(workbook, openSheet, 'Open Trades');
+            }
+            
+            // === CLOSED TRADES SHEET ===
+            const closedTradesData = closedTrades.filter(t => !t.isClosingTrade).map(trade => {
+                const cashRequired = calculateCashRequired(trade);
+                const returnPercent = calculateReturnPercent(trade);
+                const pl = calculatePL(trade);
+                const daysHeld = trade.dateClosed && trade.dateOpened ? 
+                    Math.round((new Date(trade.dateClosed) - new Date(trade.dateOpened)) / (1000 * 60 * 60 * 24)) : 0;
+                
+                return {
+                    'Status': 'CLOSED',
+                    'Symbol': trade.symbol,
+                    'Contracts': trade.contracts,
+                    'Strike': trade.strike,
+                    'Premium Collected': trade.premium,
+                    'Closing Cost': trade.closePrice || trade.closingPremium || 0,
+                    'Action': trade.action,
+                    'Type': trade.type,
+                    'Date Opened': trade.dateOpened,
+                    'Date Closed': trade.dateClosed || '',
+                    'Days Held': daysHeld,
+                    'Exp Date': trade.expDate,
+                    'Cash Required': cashRequired,
+                    'Return %': parseFloat(returnPercent),
+                    'P&L': pl,
+                    'Price @ Action': trade.priceAtAction || 0,
+                    'Info': trade.closingNotes || trade.info || '',
+                    'Trade Ref': trade.tradeRef || '',
+                    'Account': trade.account || '',
+                    'Is Rolled': trade.isRolled ? 'Yes' : 'No',
+                    'Is Assignment': trade.isAssignment ? 'Yes' : 'No',
+                    'Is Called Away': trade.isCalledAway ? 'Yes' : 'No'
+                };
+            });
+            
+            if (closedTradesData.length > 0) {
+                const closedSheet = XLSX.utils.json_to_sheet(closedTradesData);
+                closedSheet['!cols'] = [
+                    { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 15 },
+                    { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 12 },
+                    { wch: 10 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 12 },
+                    { wch: 15 }, { wch: 30 }, { wch: 10 }, { wch: 12 }, { wch: 10 },
+                    { wch: 12 }, { wch: 12 }
+                ];
+                XLSX.utils.book_append_sheet(workbook, closedSheet, 'Closed Trades');
+            }
+            
+            // === ALL TRADES SHEET (Combined) ===
+            const allTradesData = [
+                ...trades.map(t => ({...t, status: 'OPEN', isOpen: true})),
+                ...closedTrades.filter(t => !t.isClosingTrade).map(t => ({...t, status: 'CLOSED', isOpen: false}))
+            ].sort((a, b) => new Date(b.dateOpened) - new Date(a.dateOpened))
+            .map(trade => {
+                const cashRequired = calculateCashRequired(trade);
+                const returnPercent = calculateReturnPercent(trade);
+                const pl = calculatePL(trade);
+                const daysHeld = trade.dateClosed && trade.dateOpened ? 
+                    Math.round((new Date(trade.dateClosed) - new Date(trade.dateOpened)) / (1000 * 60 * 60 * 24)) : 
+                    (trade.isOpen ? Math.round((new Date() - new Date(trade.dateOpened)) / (1000 * 60 * 60 * 24)) : 0);
+                
+                return {
+                    'Status': trade.status,
+                    'Symbol': trade.symbol,
+                    'Contracts': trade.contracts,
+                    'Strike': trade.strike,
+                    'Premium': trade.premium,
+                    'Close Price': trade.closePrice || trade.closingPremium || '',
+                    'Action': trade.action,
+                    'Type': trade.type,
+                    'Date Opened': trade.dateOpened,
+                    'Date Closed': trade.dateClosed || '',
+                    'Days Held': daysHeld,
+                    'Exp Date': trade.expDate,
+                    'Cash Required': cashRequired,
+                    'Return %': parseFloat(returnPercent),
+                    'P&L': pl,
+                    'Info': trade.closingNotes || trade.info || '',
+                    'Trade Ref': trade.tradeRef || '',
+                    'Account': trade.account || ''
+                };
+            });
+            
+            if (allTradesData.length > 0) {
+                const allSheet = XLSX.utils.json_to_sheet(allTradesData);
+                allSheet['!cols'] = [
+                    { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+                    { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 12 },
+                    { wch: 10 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 12 },
+                    { wch: 30 }, { wch: 10 }, { wch: 12 }
+                ];
+                XLSX.utils.book_append_sheet(workbook, allSheet, 'All Trades');
+            }
+            
+            // === STOCK POSITIONS SHEET ===
+            if (stockPositions.length > 0) {
+                const stockData = stockPositions.map(stock => {
+                    const callsCount = stock.coveredCalls ? stock.coveredCalls.length : 0;
+                    const totalCallPremiums = stock.coveredCalls ? 
+                        stock.coveredCalls.reduce((sum, call) => sum + call.premium, 0) : 0;
+                    const putPremium = stock.originalPut ? stock.originalPut.premiumCollected : 0;
+                    const runningPL = putPremium + totalCallPremiums;
+                    
+                    return {
+                        'Symbol': stock.symbol,
+                        'Shares': stock.shares,
+                        'Cost Basis': stock.costBasis,
+                        'Assigned Price': stock.assignedPrice,
+                        'Total Cost': stock.totalCost,
+                        'Total Value': stock.totalValue,
+                        'Assigned Date': stock.assignedDate,
+                        'Put Strike': stock.originalPut ? stock.originalPut.strike : '',
+                        'Put Premium': putPremium,
+                        'Covered Calls': callsCount,
+                        'Call Premiums': totalCallPremiums,
+                        'Running P&L': runningPL,
+                        'Trade Ref': stock.tradeRef || '',
+                        'Account': stock.account || ''
+                    };
+                });
+                
+                const stockSheet = XLSX.utils.json_to_sheet(stockData);
+                stockSheet['!cols'] = [
+                    { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 15 }, { wch: 12 },
+                    { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 12 },
+                    { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 12 }
+                ];
+                XLSX.utils.book_append_sheet(workbook, stockSheet, 'Stock Positions');
+            }
+            
+            // === SUMMARY SHEET ===
+            const totalPL = trades.reduce((sum, t) => sum + calculatePL(t), 0) + 
+                           closedTrades.filter(t => !t.isClosingTrade).reduce((sum, t) => sum + calculatePL(t), 0);
+            const totalCollateral = trades.reduce((sum, t) => sum + calculateCashRequired(t), 0);
+            const openCount = trades.length;
+            const closedCount = closedTrades.filter(t => !t.isClosingTrade).length;
+            const winningTrades = closedTrades.filter(t => !t.isClosingTrade && !t.isAssignment && !t.isCalledAway && calculatePL(t) > 0).length;
+            const losingTrades = closedTrades.filter(t => !t.isClosingTrade && !t.isAssignment && !t.isCalledAway && calculatePL(t) < 0).length;
+            const winRate = closedCount > 0 ? ((winningTrades / closedCount) * 100).toFixed(1) : 0;
+            
+            const summaryData = [
+                ['Options Wheel Strategy Tracker - Export Summary'],
+                ['Export Date', new Date().toLocaleString()],
+                [''],
+                ['Portfolio Summary'],
+                ['Total P&L', totalPL.toFixed(2)],
+                ['Total Collateral', totalCollateral.toFixed(2)],
+                ['Open Positions', openCount],
+                ['Closed Positions', closedCount],
+                ['Stock Positions', stockPositions.length],
+                [''],
+                ['Performance'],
+                ['Win Rate', winRate + '%'],
+                ['Winning Trades', winningTrades],
+                ['Losing Trades', losingTrades],
+                [''],
+                ['Sheet Contents'],
+                ['- Open Trades: All currently open positions'],
+                ['- Closed Trades: All closed positions (excluding closing legs)'],
+                ['- All Trades: Combined view sorted by date'],
+                ['- Stock Positions: Assigned stock from puts'],
+                ['- Summary: This overview page']
+            ];
+            
+            const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+            summarySheet['!cols'] = [{ wch: 30 }, { wch: 20 }];
+            XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+            
+            // Download file
+            const fileName = `wheel_trades_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(workbook, fileName);
+            
+            alert(`✅ Export successful!\n\n${openCount} open trades\n${closedCount} closed trades\n${stockPositions.length} stock positions\n\nFile: ${fileName}`);
+        }
+
+
         function importData() {
             const input = document.createElement('input');
             input.type = 'file';
-            input.accept = '.json';
-            input.onchange = (e) => {
+            input.accept = '.json,.xlsx,.xls,.csv';
+            input.onchange = async (e) => {
                 const file = e.target.files[0];
+                const fileName = file.name.toLowerCase();
+                
+                // Check file type
+                if (fileName.endsWith('.json')) {
+                    // JSON import (existing functionality)
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const imported = JSON.parse(event.target.result);
+                            const openCount = imported.openTrades?.length || 0;
+                            const closedCount = imported.closedTrades?.length || 0;
+                            const stockCount = imported.stockPositions?.length || 0;
+                            
+                            if (confirm(`Import ${openCount} open trades, ${closedCount} closed trades, and ${stockCount} stock positions? This will replace current data.`)) {
+                                trades = imported.openTrades || imported || [];
+                                closedTrades = imported.closedTrades || [];
+                                tradeGroups = imported.tradeGroups || [];
+                                stockPositions = imported.stockPositions || [];
+                                saveData();
+                                renderTables();
+                                renderStockPositions();
+                                updateStats();
+                            }
+                        } catch (error) {
+                            alert('Error importing JSON file. Please check the file format.');
+                        }
+                    };
+                    reader.readAsText(file);
+                } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
+                    // Excel/CSV import
+                    importFromExcelCSV(file);
+                } else {
+                    alert('Please select a JSON, Excel (.xlsx, .xls), or CSV file.');
+                }
+            };
+            input.click();
+        }
+
+        async function importFromExcelCSV(file) {
+            try {
+                // Load SheetJS library if not already loaded
+                if (typeof XLSX === 'undefined') {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                    document.head.appendChild(script);
+                    
+                    await new Promise((resolve, reject) => {
+                        script.onload = resolve;
+                        script.onerror = () => reject(new Error('Failed to load Excel library'));
+                    });
+                }
+
                 const reader = new FileReader();
-                reader.onload = (event) => {
+                reader.onload = (e) => {
                     try {
-                        const imported = JSON.parse(event.target.result);
-                        const openCount = imported.openTrades?.length || 0;
-                        const closedCount = imported.closedTrades?.length || 0;
-                        const stockCount = imported.stockPositions?.length || 0;
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
                         
-                        if (confirm(`Import ${openCount} open trades, ${closedCount} closed trades, and ${stockCount} stock positions? This will replace current data.`)) {
-                            trades = imported.openTrades || imported || [];
-                            closedTrades = imported.closedTrades || [];
-                            tradeGroups = imported.tradeGroups || [];
-                            stockPositions = imported.stockPositions || [];
+                        // Read first sheet
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                        
+                        console.log('Imported rows:', jsonData.length);
+                        console.log('Sample data:', jsonData[0]);
+                        
+                        if (jsonData.length === 0) {
+                            alert('No data found in the file.');
+                            return;
+                        }
+                        
+                        // Validate and convert to trades
+                        const result = convertExcelToTrades(jsonData);
+                        
+                        if (result.errors.length > 0) {
+                            alert(`Found ${result.errors.length} errors:\n\n${result.errors.slice(0, 5).join('\n')}\n\n${result.errors.length > 5 ? '...and more' : ''}`);
+                            return;
+                        }
+                        
+                        // Show preview
+                        const openCount = result.openTrades.length;
+                        const closedCount = result.closedTrades.length;
+                        const groupCount = result.tradeGroups.length;
+                        
+                        if (confirm(`Import Preview:\n\n` +
+                            `✅ ${openCount} open positions\n` +
+                            `✅ ${closedCount} closed trades\n` +
+                            `✅ ${groupCount} trade groups\n\n` +
+                            `This will REPLACE all current data. Continue?`)) {
+                            
+                            trades = result.openTrades;
+                            closedTrades = result.closedTrades;
+                            tradeGroups = result.tradeGroups;
+                            stockPositions = []; // Reset stock positions
+                            
                             saveData();
                             renderTables();
                             renderStockPositions();
                             updateStats();
+                            updateLastRefDisplay();
+                            
+                            alert(`✅ Import successful!\n\n${openCount} open positions\n${closedCount} closed trades\n${groupCount} groups created`);
                         }
                     } catch (error) {
-                        alert('Error importing file. Please check the file format.');
+                        console.error('Import error:', error);
+                        alert('Error reading Excel/CSV file: ' + error.message);
                     }
                 };
-                reader.readAsText(file);
-            };
-            input.click();
+                reader.readAsArrayBuffer(file);
+            } catch (error) {
+                alert('Error importing file: ' + error.message);
+            }
+        }
+
+        function convertExcelToTrades(rows) {
+            const openTrades = [];
+            const closedTrades = [];
+            const tradeGroups = [];
+            const errors = [];
+            const tradesByRef = {}; // Track trades by ref number
+            
+            rows.forEach((row, index) => {
+                const rowNum = index + 2; // +2 because row 1 is header, and Excel is 1-indexed
+                
+                try {
+                    // Required fields
+                    const symbol = String(row.Symbol || row.symbol || '').trim().toUpperCase();
+                    const contracts = parseInt(row.Contracts || row.contracts);
+                    const strike = parseFloat(row.Strike || row.strike);
+                    const premium = parseFloat(row.Premium || row.premium);
+                    const action = String(row.Action || row.action || '').toLowerCase();
+                    const type = String(row.Type || row.type || '').toLowerCase();
+                    const dateOpened = row['Date Opened'] || row.dateOpened || row['Date_Opened'];
+                    const expDate = row['Exp Date'] || row.expDate || row['Exp_Date'];
+                    
+                    // Optional fields
+                    const priceAtAction = parseFloat(row['Price At Action'] || row.priceAtAction || row['Price_At_Action'] || 0);
+                    const info = String(row.Info || row.info || row.Notes || row.notes || '');
+                    const tradeRef = String(row['Trade Ref'] || row.tradeRef || row['Trade_Ref'] || '').trim();
+                    const account = String(row.Account || row.account || '');
+                    const dateClosed = row['Date Closed'] || row.dateClosed || row['Date_Closed'] || '';
+                    const closePrice = parseFloat(row['Close Price'] || row.closePrice || row['Close_Price'] || 0);
+                    
+                    // Validation
+                    if (!symbol) {
+                        errors.push(`Row ${rowNum}: Missing symbol`);
+                        return;
+                    }
+                    if (!contracts || isNaN(contracts)) {
+                        errors.push(`Row ${rowNum}: Invalid contracts`);
+                        return;
+                    }
+                    if (!strike || isNaN(strike)) {
+                        errors.push(`Row ${rowNum}: Invalid strike`);
+                        return;
+                    }
+                    if (isNaN(premium)) {
+                        errors.push(`Row ${rowNum}: Invalid premium`);
+                        return;
+                    }
+                    if (action !== 'sell' && action !== 'buy' && action !== 'roll') {
+                        errors.push(`Row ${rowNum}: Action must be 'sell', 'buy', or 'roll'`);
+                        return;
+                    }
+                    if (type !== 'put' && type !== 'call') {
+                        errors.push(`Row ${rowNum}: Type must be 'put' or 'call'`);
+                        return;
+                    }
+                    if (!dateOpened) {
+                        errors.push(`Row ${rowNum}: Missing Date Opened`);
+                        return;
+                    }
+                    if (!expDate) {
+                        errors.push(`Row ${rowNum}: Missing Exp Date`);
+                        return;
+                    }
+                    
+                    // Format dates
+                    const formattedDateOpened = formatExcelDate(dateOpened);
+                    const formattedExpDate = formatExcelDate(expDate);
+                    const formattedDateClosed = dateClosed ? formatExcelDate(dateClosed) : '';
+                    
+                    // Create trade object
+                    const trade = {
+                        id: Date.now() + Math.random(),
+                        symbol,
+                        contracts,
+                        strike,
+                        premium,
+                        action,
+                        type,
+                        dateOpened: formattedDateOpened,
+                        expDate: formattedExpDate,
+                        priceAtAction,
+                        info,
+                        tradeRef,
+                        account,
+                        groupId: `${symbol}-${strike}-${type}-${formattedExpDate}`,
+                        status: 'open'
+                    };
+                    
+                    // Handle different actions
+                    if (action === 'roll' && tradeRef) {
+                        // ROLL: Close old position with same Trade Ref, then open new position
+                        const matchingSell = openTrades.find(t => 
+                            t.tradeRef === tradeRef &&
+                            t.symbol === symbol &&
+                            t.action === 'sell'
+                        );
+                        
+                        if (matchingSell) {
+                            // Close the old position
+                            matchingSell.status = 'closed';
+                            matchingSell.dateClosed = formattedDateOpened;
+                            matchingSell.isRolled = true;
+                            
+                            // Create closing trade (buy back)
+                            const closingTrade = {
+                                id: Date.now() + Math.random(),
+                                symbol: matchingSell.symbol,
+                                contracts: matchingSell.contracts,
+                                strike: matchingSell.strike,
+                                premium: premium, // Use current row's premium as closing cost
+                                action: 'buy',
+                                type: matchingSell.type,
+                                dateOpened: formattedDateOpened,
+                                expDate: matchingSell.expDate,
+                                priceAtAction: priceAtAction,
+                                info: 'Roll close',
+                                tradeRef: tradeRef,
+                                account: account,
+                                groupId: matchingSell.groupId,
+                                status: 'closed',
+                                dateClosed: formattedDateOpened,
+                                isClosingTrade: true,
+                                isRolled: true
+                            };
+                            
+                            // Move old position to closed
+                            closedTrades.push(matchingSell);
+                            closedTrades.push(closingTrade);
+                            const sellIndex = openTrades.indexOf(matchingSell);
+                            openTrades.splice(sellIndex, 1);
+                            
+                            // Create new rolled position (from current row's strike/exp)
+                            const newRolledPosition = {
+                                id: Date.now() + Math.random() + 1,
+                                symbol,
+                                contracts,
+                                strike, // New strike from current row
+                                premium: 0, // Will need separate row for new premium collected
+                                action: 'sell',
+                                type,
+                                dateOpened: formattedDateOpened,
+                                expDate: formattedExpDate, // New exp date
+                                priceAtAction,
+                                info: `Rolled from $${matchingSell.strike}`,
+                                tradeRef,
+                                account,
+                                groupId: `${symbol}-${strike}-${type}-${formattedExpDate}`,
+                                status: 'open',
+                                isRolled: true
+                            };
+                            openTrades.push(newRolledPosition);
+                            
+                            // Add to group
+                            let group = tradeGroups.find(g => g.name === `Trade Ref: ${tradeRef}`);
+                            if (group) {
+                                group.trades.push(matchingSell);
+                                group.trades.push(closingTrade);
+                            } else {
+                                tradeGroups.push({
+                                    id: Date.now() + Math.random(),
+                                    name: `Trade Ref: ${tradeRef}`,
+                                    trades: [matchingSell, closingTrade],
+                                    created: new Date().toISOString()
+                                });
+                            }
+                        } else {
+                            // Roll without matching sell - treat as new position
+                            trade.isRolled = true;
+                            openTrades.push(trade);
+                        }
+                    } else if (action === 'buy' && tradeRef) {
+                        // BUY: Close matching SELL with same Trade Ref + Strike
+                        const matchingSell = openTrades.find(t => 
+                            t.tradeRef === tradeRef &&
+                            t.symbol === symbol &&
+                            t.action === 'sell' &&
+                            t.strike === strike
+                        );
+                        
+                        if (matchingSell) {
+                            // Close the position
+                            matchingSell.status = 'closed';
+                            matchingSell.dateClosed = formattedDateClosed || formattedDateOpened;
+                            matchingSell.closePrice = premium;
+                            
+                            // Move to closed trades
+                            closedTrades.push(matchingSell);
+                            const sellIndex = openTrades.indexOf(matchingSell);
+                            openTrades.splice(sellIndex, 1);
+                            
+                            // Add closing trade
+                            trade.status = 'closed';
+                            trade.dateClosed = formattedDateClosed || formattedDateOpened;
+                            trade.isClosingTrade = true;
+                            closedTrades.push(trade);
+                            
+                            // Create or update group
+                            let group = tradeGroups.find(g => g.name === `Trade Ref: ${tradeRef}`);
+                            if (group) {
+                                group.trades.push(matchingSell);
+                                group.trades.push(trade);
+                            } else {
+                                tradeGroups.push({
+                                    id: Date.now() + Math.random(),
+                                    name: `Trade Ref: ${tradeRef}`,
+                                    trades: [matchingSell, trade],
+                                    created: new Date().toISOString()
+                                });
+                            }
+                        } else {
+                            // BUY without matching SELL - add as closed trade
+                            trade.status = 'closed';
+                            trade.dateClosed = formattedDateClosed || formattedDateOpened;
+                            closedTrades.push(trade);
+                        }
+                    } else if (dateClosed || closePrice > 0) {
+                        // Explicitly closed trade
+                        trade.status = 'closed';
+                        trade.dateClosed = formattedDateClosed || formattedDateOpened;
+                        trade.closePrice = closePrice;
+                        closedTrades.push(trade);
+                    } else {
+                        // SELL or open trade
+                        openTrades.push(trade);
+                    }
+                    
+                } catch (error) {
+                    errors.push(`Row ${rowNum}: ${error.message}`);
+                }
+            });
+            
+            return { openTrades, closedTrades, tradeGroups, errors };
+        }
+
+        function formatExcelDate(dateValue) {
+            // Handle Excel serial date numbers
+            if (typeof dateValue === 'number') {
+                const date = XLSX.SSF.parse_date_code(dateValue);
+                return `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
+            }
+            
+            // Handle date objects
+            if (dateValue instanceof Date) {
+                return dateValue.toISOString().split('T')[0];
+            }
+            
+            // Handle string dates (YYYY-MM-DD, MM/DD/YYYY, etc.)
+            const str = String(dateValue).trim();
+            
+            // Check if already in YYYY-MM-DD format
+            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+                return str;
+            }
+            
+            // Try to parse as date
+            const parsed = new Date(str);
+            if (!isNaN(parsed.getTime())) {
+                return parsed.toISOString().split('T')[0];
+            }
+            
+            return str; // Return as-is if can't parse
         }
     </script>
 </body>
