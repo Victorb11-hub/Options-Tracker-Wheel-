@@ -1005,6 +1005,10 @@
             <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
                 <label style="color: #888;">Date Range:</label>
                 <select id="weeklyRangeFilter" onchange="updateWeeklyPremium()" style="padding: 8px 12px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 4px;">
+                    <option value="next4">Next 4 Weeks</option>
+                    <option value="next8">Next 8 Weeks</option>
+                    <option value="next12">Next 12 Weeks</option>
+                    <option value="-" disabled>──────────</option>
                     <option value="4">Last 4 Weeks</option>
                     <option value="8">Last 8 Weeks</option>
                     <option value="12" selected>Last 12 Weeks</option>
@@ -4772,18 +4776,29 @@
             
             // Convert to array and sort by week
             let weeksArray = Object.values(weeklyPremiums).sort((a, b) => 
-                b.weekStart - a.weekStart // Newest first
+                a.weekStart - b.weekStart // Chronological (oldest first)
             );
             
             // Apply date range filter
             const rangeFilter = document.getElementById('weeklyRangeFilter').value;
-            if (rangeFilter !== 'all') {
-                const weeksToShow = parseInt(rangeFilter);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const currentWeekStart = getWeekStart(today);
+            
+            if (rangeFilter.startsWith('next')) {
+                // Forward-looking: show only future weeks
+                const weeksToShow = parseInt(rangeFilter.replace('next', ''));
+                weeksArray = weeksArray.filter(w => w.weekStart >= currentWeekStart);
                 weeksArray = weeksArray.slice(0, weeksToShow);
+            } else if (rangeFilter !== 'all') {
+                // Backward-looking: show only past weeks
+                const weeksToShow = parseInt(rangeFilter);
+                weeksArray = weeksArray.filter(w => w.weekStart < currentWeekStart);
+                weeksArray = weeksArray.slice(-weeksToShow); // Get last N weeks
             }
             
-            // Reverse for chronological display
-            return weeksArray.reverse();
+            // Return in chronological order
+            return weeksArray;
         }
 
         function renderWeeklyChart(weeklyData) {
