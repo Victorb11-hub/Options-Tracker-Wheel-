@@ -4042,87 +4042,130 @@
         }
 
         function confirmClose() {
-            if (closingIndex >= 0) {
-                const openingTrade = trades[closingIndex];
-                const closeDate = document.getElementById('closeDate').value;
-                const closingPremium = parseFloat(document.getElementById('closingPremium').value) || 0;
-                const closingNotes = document.getElementById('closingNotes').value;
-                
-                // Mark the original trade as closed
-                openingTrade.status = 'closed';
-                openingTrade.dateClosed = closeDate;
-                
-                // Create a separate closing trade entry (buying back the option)
-                const closingTrade = {
-                    id: Date.now() + Math.random(),
-                    tradeRef: openingTrade.tradeRef || '', // Inherit tradeRef
-                    account: openingTrade.account || '', // Inherit account
-                    groupId: openingTrade.groupId,
-                    symbol: openingTrade.symbol,
-                    contracts: openingTrade.contracts,
-                    strike: openingTrade.strike,
-                    premium: closingPremium,
-                    action: openingTrade.action === 'sell' ? 'buy' : 'sell', // Opposite action
-                    type: openingTrade.type,
-                    dateOpened: closeDate,
-                    expDate: openingTrade.expDate,
-                    priceAtAction: openingTrade.priceAtAction,
-                    info: closingNotes || 'Closing trade',
-                    status: 'closed',
-                    dateClosed: closeDate,
-                    isClosingTrade: true,
-                    isRolled: openingTrade.isRolled || false // Inherit rolled status from opening trade
+            if (closingIndex < 0) {
+                alert('Error: No trade selected to close');
+                return;
+            }
+            
+            if (closingIndex >= trades.length) {
+                alert('Error: Trade index out of bounds');
+                return;
+            }
+            
+            const openingTrade = trades[closingIndex];
+            const closeDate = document.getElementById('closeDate').value;
+            const closingPremium = parseFloat(document.getElementById('closingPremium').value) || 0;
+            const closingNotes = document.getElementById('closingNotes').value;
+            
+            if (!closeDate) {
+                alert('Please enter a close date');
+                return;
+            }
+            
+            console.log('Closing trade:', openingTrade);
+            console.log('Close date:', closeDate, 'Closing premium:', closingPremium);
+            
+            // Mark the original trade as closed
+            openingTrade.status = 'closed';
+            openingTrade.dateClosed = closeDate;
+            openingTrade.closePrice = closingPremium;
+            
+            // Create a separate closing trade entry (buying back the option)
+            const closingTrade = {
+                id: Date.now() + Math.random(),
+                tradeRef: openingTrade.tradeRef || '', // Inherit tradeRef
+                account: openingTrade.account || '', // Inherit account
+                groupId: openingTrade.groupId,
+                symbol: openingTrade.symbol,
+                contracts: openingTrade.contracts,
+                strike: openingTrade.strike,
+                premium: closingPremium,
+                action: openingTrade.action === 'sell' ? 'buy' : 'sell', // Opposite action
+                type: openingTrade.type,
+                dateOpened: closeDate,
+                expDate: openingTrade.expDate,
+                priceAtAction: openingTrade.priceAtAction,
+                info: closingNotes || 'Closing trade',
+                status: 'closed',
+                dateClosed: closeDate,
+                isClosingTrade: true,
+                isRolled: openingTrade.isRolled || false, // Inherit rolled status from opening trade
+                isCoveredCall: openingTrade.isCoveredCall || false,
+                linkedStockId: openingTrade.linkedStockId
+            };
+            
+            // Move opening trade to closed trades
+            closedTrades.push(openingTrade);
+            
+            // Add closing trade to closed trades
+            closedTrades.push(closingTrade);
+            
+            // Remove from open trades
+            trades.splice(closingIndex, 1);
+            
+            console.log('Trade closed and moved to closedTrades');
+            console.log('Open trades remaining:', trades.length);
+            
+            // If this was a covered call, update the stock position
+            if (openingTrade.isCoveredCall && openingTrade.linkedStockId) {
+                const stock = stockPositions.find(s => s.id === openingTrade.linkedStockId);
+                if (stock && stock.coveredCalls) {
+                    // Find and mark the call as closed in the stock's coveredCalls array
+                    const callInStock = stock.coveredCalls.find(c => 
+                        c.strike === openingTrade.strike && 
+                        c.expDate === openingTrade.expDate &&
+                        c.dateOpened === openingTrade.dateOpened
+                    );
+                    if (callInStock) {
+                        callInStock.status = 'closed';
+                        callInStock.dateClosed = closeDate;
+                        callInStock.closePrice = closingPremium;
+                        console.log('Updated covered call status in stock position');
+                    }
+                }
+            }
+            
+            // Find existing group with same Trade Ref # or create new one
+            let existingGroup = null;
+            if (openingTrade.tradeRef && openingTrade.tradeRef.trim()) {
+                // Look for a group containing trades with the same tradeRef
+                existingGroup = tradeGroups.find(g => 
+                    g.trades && g.trades.some(t => t.tradeRef === openingTrade.tradeRef)
+                );
+            }
+            
+            if (existingGroup) {
+                // Add to existing group
+                console.log('Adding close to existing group:', existingGroup.name);
+                existingGroup.trades.push(openingTrade);
+                existingGroup.trades.push(closingTrade);
+            } else {
+                // Auto-create a new trade group with both trades
+                console.log('Creating new close group');
+                const group = {
+                    id: Date.now(),
+                    name: openingTrade.tradeRef ? `Trade Ref: ${openingTrade.tradeRef}` : `${openingTrade.symbol} ${openingTrade.strike} ${openingTrade.type.toUpperCase()} - ${formatDate(openingTrade.dateOpened)} to ${formatDate(closeDate)}`,
+                    trades: [openingTrade, closingTrade],
+                    created: new Date().toISOString()
                 };
                 
-                // Move opening trade to closed trades
-                closedTrades.push(openingTrade);
-                
-                // Add closing trade to closed trades
-                closedTrades.push(closingTrade);
-                
-                // Remove from open trades
-                trades.splice(closingIndex, 1);
-                
-                // Find existing group with same Trade Ref # or create new one
-                let existingGroup = null;
-                if (openingTrade.tradeRef && openingTrade.tradeRef.trim()) {
-                    // Look for a group containing trades with the same tradeRef
-                    existingGroup = tradeGroups.find(g => 
-                        g.trades && g.trades.some(t => t.tradeRef === openingTrade.tradeRef)
-                    );
-                }
-                
-                if (existingGroup) {
-                    // Add to existing group
-                    console.log('Adding close to existing group:', existingGroup.name);
-                    existingGroup.trades.push(openingTrade);
-                    existingGroup.trades.push(closingTrade);
-                } else {
-                    // Auto-create a new trade group with both trades
-                    console.log('Creating new close group');
-                    const group = {
-                        id: Date.now(),
-                        name: openingTrade.tradeRef ? `Trade Ref: ${openingTrade.tradeRef}` : `${openingTrade.symbol} ${openingTrade.strike} ${openingTrade.type.toUpperCase()} - ${formatDate(openingTrade.dateOpened)} to ${formatDate(closeDate)}`,
-                        trades: [openingTrade, closingTrade],
-                        created: new Date().toISOString()
-                    };
-                    
-                    tradeGroups.push(group);
-                }
-                
-                saveData();
-                renderTables();
-                renderOpenTrades();
-                if (currentTab === 'all') {
-                    renderAllTrades();
-                } else if (currentTab === 'groups') {
-                    renderGroups();
-                }
-                updateStats();
-                updateLastRefDisplay();
-                closeCloseModal();
-                alert('Position closed and group created successfully');
+                tradeGroups.push(group);
             }
+            
+            saveData();
+            renderTables();
+            renderOpenTrades();
+            renderStockPositions(); // Update stock positions in case it was a covered call
+            if (currentTab === 'all') {
+                renderAllTrades();
+            } else if (currentTab === 'groups') {
+                renderGroups();
+            }
+            updateStats();
+            updateLastRefDisplay();
+            closeCloseModal();
+            
+            alert('✅ Position closed successfully!\n\nThe trade has been moved to closed trades and grouped appropriately.');
         }
 
         function reopenTrade(index) {
@@ -4216,6 +4259,7 @@
             
             if (sellingCallForStock < 0) {
                 console.log('No stock selected');
+                alert('Error: No stock position selected');
                 return;
             }
             
@@ -4230,8 +4274,20 @@
             
             console.log('Values:', {strike, premium, expDate, dateOpened, notes});
             
-            if (!strike || !premium || !expDate || !dateOpened) {
-                alert('Please fill in all required fields');
+            if (!strike || strike <= 0) {
+                alert('Please enter a valid strike price');
+                return;
+            }
+            if (!premium || premium < 0) {
+                alert('Please enter a valid premium (use 0 if no premium collected)');
+                return;
+            }
+            if (!expDate) {
+                alert('Please select an expiration date');
+                return;
+            }
+            if (!dateOpened) {
+                alert('Please select the date the call was opened');
                 return;
             }
             
@@ -4246,32 +4302,35 @@
                 premiumPerShare: premium,
                 expDate: expDate,
                 dateOpened: dateOpened,
-                notes: notes
+                notes: notes,
+                status: 'open'
             };
             stock.coveredCalls.push(call);
-            console.log('Added call to stock:', call);
+            console.log('Added call to stock.coveredCalls:', call);
             
-            // Create call trade for All Trades tracking
+            // Create call trade for All Trades tracking AND open positions
             const callTrade = {
                 id: Date.now() + Math.random(),
                 symbol: stock.symbol,
                 action: 'sell',
                 type: 'call',
-                contracts: stock.shares / 100,
+                contracts: contracts,
                 strike: strike,
                 premium: premium,
                 dateOpened: dateOpened,
                 expDate: expDate,
-                priceAtAction: stock.assignedPrice || stock.costBasis, // Use stock's current price
-                tradeRef: stock.tradeRef,
-                account: stock.account,
-                info: notes || `Covered call - ${stock.shares} shares`,
+                priceAtAction: stock.assignedPrice || stock.costBasis,
+                tradeRef: stock.tradeRef || '',
+                account: stock.account || '',
+                info: notes || `Covered call on ${stock.shares} shares`,
                 status: 'open',
                 isCoveredCall: true,
-                linkedStockId: stock.id
+                linkedStockId: stock.id,
+                linkedStockPositionIndex: sellingCallForStock
             };
             trades.push(callTrade);
-            console.log('Added call trade:', callTrade);
+            console.log('Added call trade to trades array:', callTrade);
+            console.log('Total trades now:', trades.length);
             
             // Save and render
             saveData();
@@ -4280,7 +4339,7 @@
             renderStockPositions();
             updateStats();
             
-            alert(`✅ Covered Call Sold!\n\nSold ${stock.shares / 100} call contract(s) at $${strike.toFixed(2)}\nPremium collected: $${premiumTotal.toFixed(2)}\n\nRunning P&L updated in Stock Positions!`);
+            alert(`✅ Covered Call Sold!\n\n${contracts} call contract(s) at $${strike.toFixed(2)}\nPremium: $${premiumTotal.toFixed(2)}\n\nThe call now appears in:\n- Stock Positions (covered calls)\n- Open Positions\n- All Trades`);
         }
 
         function confirmAssign() {
@@ -4500,31 +4559,64 @@
             const totalPL = putPremium + callPremiums + stockProfit;
             
             // Close any open covered calls (they're being exercised)
-            const openCoveredCalls = trades.filter(t => 
-                t.symbol === stock.symbol &&
+            // Method 1: Find by linkedStockId
+            let openCoveredCalls = trades.filter(t => 
+                t.linkedStockId === stock.id &&
                 t.type === 'call' &&
                 t.action === 'sell' &&
-                t.isCoveredCall &&
-                t.tradeRef === stock.tradeRef
+                t.isCoveredCall
             );
             
-            console.log(`Closing ${openCoveredCalls.length} open covered calls for ${stock.symbol}`);
+            // Method 2: If no calls found by ID, find by symbol and tradeRef
+            if (openCoveredCalls.length === 0 && stock.tradeRef) {
+                openCoveredCalls = trades.filter(t => 
+                    t.symbol === stock.symbol &&
+                    t.type === 'call' &&
+                    t.action === 'sell' &&
+                    t.isCoveredCall &&
+                    t.tradeRef === stock.tradeRef
+                );
+            }
             
+            // Method 3: If still no calls found, find by symbol only (less safe but catches edge cases)
+            if (openCoveredCalls.length === 0) {
+                openCoveredCalls = trades.filter(t => 
+                    t.symbol === stock.symbol &&
+                    t.type === 'call' &&
+                    t.action === 'sell' &&
+                    t.isCoveredCall
+                );
+            }
+            
+            console.log(`Found ${openCoveredCalls.length} open covered calls for ${stock.symbol}:`, openCoveredCalls);
+            
+            // Close each covered call
             openCoveredCalls.forEach(call => {
+                console.log('Closing call:', call);
+                
                 // Mark call as closed (exercised)
                 call.status = 'closed';
                 call.dateClosed = calledAwayDate;
                 call.closingNotes = `Exercised - Stock called away at $${salePriceNum.toFixed(2)}`;
+                call.closePrice = 0; // No cost to close, stock was called away
                 
                 // Move to closed trades
                 closedTrades.push(call);
-                
-                // Remove from open trades
-                const callIndex = trades.indexOf(call);
+            });
+            
+            // Remove closed calls from open trades array
+            openCoveredCalls.forEach(call => {
+                const callIndex = trades.findIndex(t => t.id === call.id);
                 if (callIndex >= 0) {
+                    console.log('Removing call from trades at index:', callIndex);
                     trades.splice(callIndex, 1);
+                } else {
+                    console.log('Warning: Could not find call in trades array:', call);
                 }
             });
+            
+            console.log(`Closed and removed ${openCoveredCalls.length} covered calls`);
+            console.log('Remaining open trades:', trades.length);
             
             // Create "CALLED AWAY" trade entry
             const calledAwayTrade = {
