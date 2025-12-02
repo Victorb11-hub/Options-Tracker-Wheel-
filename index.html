@@ -5037,10 +5037,12 @@
                 localStorage.setItem(getUserStorageKey('wheelTrades'), JSON.stringify(trades));
                 localStorage.setItem(getUserStorageKey('wheelClosedTrades'), JSON.stringify(closedTrades));
                 localStorage.setItem(getUserStorageKey('wheelTradeGroups'), JSON.stringify(tradeGroups));
+                localStorage.setItem(getUserStorageKey('stockPositions'), JSON.stringify(stockPositions));
             } else {
                 localStorage.setItem('wheelTrades', JSON.stringify(trades));
                 localStorage.setItem('wheelClosedTrades', JSON.stringify(closedTrades));
                 localStorage.setItem('wheelTradeGroups', JSON.stringify(tradeGroups));
+                localStorage.setItem('stockPositions', JSON.stringify(stockPositions));
             }
         }
 
@@ -5048,6 +5050,7 @@
             const savedTrades = localStorage.getItem('wheelTrades');
             const savedClosedTrades = localStorage.getItem('wheelClosedTrades');
             const savedTradeGroups = localStorage.getItem('wheelTradeGroups');
+            const savedStockPositions = localStorage.getItem('stockPositions');
             
             if (savedTrades) {
                 try {
@@ -5078,6 +5081,15 @@
                     tradeGroups = [];
                 }
             }
+            if (savedStockPositions) {
+                try {
+                    stockPositions = JSON.parse(savedStockPositions);
+                    if (!Array.isArray(stockPositions)) stockPositions = [];
+                } catch (e) {
+                    console.error('Error loading stock positions:', e);
+                    stockPositions = [];
+                }
+            }
             
             renderTables();
             updateStats();
@@ -5088,6 +5100,7 @@
                 openTrades: trades,
                 closedTrades: closedTrades,
                 tradeGroups: tradeGroups,
+                stockPositions: stockPositions,
                 exportDate: new Date().toISOString()
             };
             const dataStr = JSON.stringify(data, null, 2);
@@ -5109,12 +5122,18 @@
                 reader.onload = (event) => {
                     try {
                         const imported = JSON.parse(event.target.result);
-                        if (confirm(`Import ${(imported.openTrades?.length || 0)} open and ${(imported.closedTrades?.length || 0)} closed trades? This will replace current data.`)) {
+                        const openCount = imported.openTrades?.length || 0;
+                        const closedCount = imported.closedTrades?.length || 0;
+                        const stockCount = imported.stockPositions?.length || 0;
+                        
+                        if (confirm(`Import ${openCount} open trades, ${closedCount} closed trades, and ${stockCount} stock positions? This will replace current data.`)) {
                             trades = imported.openTrades || imported || [];
                             closedTrades = imported.closedTrades || [];
                             tradeGroups = imported.tradeGroups || [];
+                            stockPositions = imported.stockPositions || [];
                             saveData();
                             renderTables();
+                            renderStockPositions();
                             updateStats();
                         }
                     } catch (error) {
