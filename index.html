@@ -4065,6 +4065,11 @@
                     return;
                 }
                 
+                // Skip closing trade entries (they're already accounted for in the opening trade's closePrice)
+                if (trade.isClosingTrade) {
+                    return;
+                }
+                
                 totalPL += calculatePL(trade);
             });
 
