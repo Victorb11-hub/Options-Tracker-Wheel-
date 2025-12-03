@@ -1005,6 +1005,8 @@
             <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
                 <label style="color: #888;">Date Range:</label>
                 <select id="weeklyRangeFilter" onchange="updateWeeklyPremium()" style="padding: 8px 12px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 4px;">
+                    <option value="prev4next4">Previous 4 & Next 4</option>
+                    <option value="-" disabled>──────────</option>
                     <option value="next4">Next 4 Weeks</option>
                     <option value="next8">Next 8 Weeks</option>
                     <option value="next12">Next 12 Weeks</option>
@@ -4857,7 +4859,18 @@
             today.setHours(0, 0, 0, 0);
             const currentWeekStart = getWeekStart(today);
             
-            if (rangeFilter.startsWith('next')) {
+            if (rangeFilter === 'prev4next4') {
+                // Show previous 4 weeks and next 4 weeks (8 weeks total)
+                const fourWeeksAgo = new Date(currentWeekStart);
+                fourWeeksAgo.setDate(fourWeeksAgo.getDate() - (7 * 4)); // 4 weeks back
+                
+                const fourWeeksAhead = new Date(currentWeekStart);
+                fourWeeksAhead.setDate(fourWeeksAhead.getDate() + (7 * 4)); // 4 weeks forward
+                
+                weeksArray = weeksArray.filter(w => 
+                    w.weekStart >= fourWeeksAgo && w.weekStart < fourWeeksAhead
+                );
+            } else if (rangeFilter.startsWith('next')) {
                 // Forward-looking: show only future weeks
                 const weeksToShow = parseInt(rangeFilter.replace('next', ''));
                 weeksArray = weeksArray.filter(w => w.weekStart >= currentWeekStart);
