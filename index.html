@@ -4454,14 +4454,25 @@
             overallReturn = overallReturn.toFixed(2);
 
             // Update stats
-            document.getElementById('totalCollateral').textContent = `$${totalCollateral.toLocaleString()}`;
-            document.getElementById('totalPL').textContent = `$${formatCurrency(totalPL)}`;
-            document.getElementById('totalPL').className = `stat-value ${totalPL >= 0 ? 'positive' : 'negative'}`;
-            document.getElementById('overallReturn').textContent = `${overallReturn}%`;
-            document.getElementById('overallReturn').className = `stat-value ${parseFloat(overallReturn) >= 0 ? 'positive' : 'negative'}`;
-            document.getElementById('openPositions').textContent = trades.length;
-            document.getElementById('avgReturn').textContent = `${avgReturn}%`;
-            document.getElementById('closedPositions').textContent = tradeGroups.length; // Show number of closed groups
+            const totalCollateralEl = document.getElementById('totalCollateral');
+            const totalPLEl = document.getElementById('totalPL');
+            const overallReturnEl = document.getElementById('overallReturn');
+            const openPositionsEl = document.getElementById('openPositions');
+            const avgReturnEl = document.getElementById('avgReturn');
+            const closedPositionsEl = document.getElementById('closedPositions');
+            
+            if (totalCollateralEl) totalCollateralEl.textContent = `$${totalCollateral.toLocaleString()}`;
+            if (totalPLEl) {
+                totalPLEl.textContent = `$${formatCurrency(totalPL)}`;
+                totalPLEl.className = `stat-value ${totalPL >= 0 ? 'positive' : 'negative'}`;
+            }
+            if (overallReturnEl) {
+                overallReturnEl.textContent = `${overallReturn}%`;
+                overallReturnEl.className = `stat-value ${parseFloat(overallReturn) >= 0 ? 'positive' : 'negative'}`;
+            }
+            if (openPositionsEl) openPositionsEl.textContent = trades.length;
+            if (avgReturnEl) avgReturnEl.textContent = `${avgReturn}%`;
+            if (closedPositionsEl) closedPositionsEl.textContent = tradeGroups.length; // Show number of closed groups
             
             // Update dashboard metrics if on dashboard tab
             if (currentTab === 'dashboard') {
