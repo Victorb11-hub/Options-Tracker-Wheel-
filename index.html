@@ -2701,7 +2701,7 @@
                         <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
                         <td>$${(trade.priceAtAction || 0).toFixed(2)}</td>
                         <td class="${parseFloat(otm) >= 0 ? 'positive-value' : 'negative-value'}">${otm}%</td>
-                        <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                        <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${formatCurrency(pl)}</td>
                         <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${trade.info || '-'}</td>
                         <td style="color: #00ff88;"><strong>${trade.tradeRef || '-'}</strong></td>
                         <td>${trade.account || '-'}</td>
@@ -2731,13 +2731,13 @@
                         <td>${makeSymbolClickable(stock.symbol, false)}<br><span style="font-size: 0.8rem; color: #ff8844;">STOCK</span></td>
                         <td><strong>${stock.shares / 100}</strong><br><span style="font-size: 0.8rem;">(${stock.shares} shares)</span></td>
                         <td>$${stock.costBasis.toFixed(2)}</td>
-                        <td><span style="color: #00ff88;">+$${stock.originalPut.premiumCollected.toFixed(2)}</span></td>
+                        <td><span style="color: #00ff88;">+$${formatCurrency(stock.originalPut.premiumCollected)}</span></td>
                         <td colspan="2"><span style="background: #ff8844; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold;">ASSIGNED</span></td>
                         <td>${formatDate(stock.assignedDate)}</td>
                         <td>-</td>
                         <td>$${stock.totalCost.toLocaleString()}</td>
                         <td colspan="2">${callsCount} call${callsCount !== 1 ? 's' : ''}</td>
-                        <td class="${runningPL >= 0 ? 'positive-value' : 'negative-value'}"><strong>${runningPL >= 0 ? '+' : ''}$${runningPL.toFixed(2)}</strong></td>
+                        <td class="${runningPL >= 0 ? 'positive-value' : 'negative-value'}"><strong>${runningPL >= 0 ? '+' : ''}$${formatCurrency(runningPL)}</strong></td>
                         <td>Running P&L</td>
                         <td style="color: #00ff88;"><strong>${stock.tradeRef || '-'}</strong></td>
                         <td>${stock.account || '-'}</td>
@@ -2837,7 +2837,7 @@
                         <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
                         <td>$${(trade.priceAtAction || 0).toFixed(2)}</td>
                         <td class="${parseFloat(otm) >= 0 ? 'positive-value' : 'negative-value'}">${otm}%</td>
-                        <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                        <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${formatCurrency(pl)}</td>
                         <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${trade.info || '-'}</td>
                         <td style="color: #00ff88;"><strong>${trade.tradeRef || '-'}</strong></td>
                         <td>${trade.account || '-'}</td>
@@ -2931,7 +2931,7 @@
                         <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
                         <td>$${(trade.priceAtAction || 0).toFixed(2)}</td>
                         <td class="${parseFloat(otm) >= 0 ? 'positive-value' : 'negative-value'}">${otm}%</td>
-                        <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                        <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${formatCurrency(pl)}</td>
                         <td class="${rollCredit !== null ? (rollCredit >= 0 ? 'positive-value' : 'negative-value') : ''}">${rollCredit !== null ? '$' + rollCredit.toFixed(2) : '-'}</td>
                         <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${trade.info || '-'}</td>
                         <td style="color: #00ff88;"><strong>${trade.tradeRef || '-'}</strong></td>
@@ -2990,7 +2990,7 @@
                             <td colspan="5" style="padding: 12px 15px; text-align: right;">
                                 <strong style="color: #fff;">Current Roll P/L: </strong>
                                 <strong class="${rollPL >= 0 ? 'positive-value' : 'negative-value'}" style="font-size: 1.1rem;">
-                                    ${rollPL >= 0 ? '+' : ''}$${rollPL.toFixed(2)}
+                                    ${rollPL >= 0 ? '+' : ''}$${formatCurrency(rollPL)}
                                 </strong>
                             </td>
                         </tr>
@@ -3016,7 +3016,7 @@
                                 <td class="${parseFloat(histReturnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${histReturnPercent}%</td>
                                 <td>$${historyTrade.priceAtAction.toFixed(2)}</td>
                                 <td class="${parseFloat(histOtm) >= 0 ? 'positive-value' : 'negative-value'}">${histOtm}%</td>
-                                <td class="${histPl >= 0 ? 'positive-value' : 'negative-value'}">$${histPl.toFixed(2)}</td>
+                                <td class="${histPl >= 0 ? 'positive-value' : 'negative-value'}">$${formatCurrency(histPl)}</td>
                                 <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${historyTrade.info || '-'}</td>
                                 <td style="color: #00ff88;"><strong>${historyTrade.tradeRef || '-'}</strong></td>
                                 <td>${historyTrade.account || '-'}</td>
@@ -3041,7 +3041,7 @@
                     <td>-</td>
                     <td>-</td>
                     <td>-</td>
-                    <td class="${symbolPL >= 0 ? 'positive-value' : 'negative-value'}">$${symbolPL.toFixed(2)}</td>
+                    <td class="${symbolPL >= 0 ? 'positive-value' : 'negative-value'}">$${formatCurrency(symbolPL)}</td>
                     <td colspan="5">-</td>
                 </tr>
             `;
@@ -3144,7 +3144,7 @@
                         <td>${formatDate(trade.expDate)}</td>
                         <td>${cashRequired > 0 ? '$' + cashRequired.toLocaleString() : '-'}</td>
                         <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
-                        <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                        <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${formatCurrency(pl)}</td>
                         <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${trade.closingNotes || trade.info || '-'}</td>
                         <td>
                             <div class="action-buttons">
@@ -3347,7 +3347,7 @@
                         <td>${formatDate(trade.expDate)}</td>
                         <td>${cashRequired > 0 ? '$' + cashRequired.toLocaleString() : '-'}</td>
                         <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
-                        <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                        <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${formatCurrency(pl)}</td>
                         <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${trade.closingNotes || trade.info || '-'}</td>
                         <td style="color: #00ff88;"><strong>${trade.tradeRef || '-'}</strong></td>
                         <td>${trade.account || '-'}</td>
@@ -3418,7 +3418,7 @@
                         <div class="table-header">
                             <div class="table-title">${group.name}</div>
                             <div style="font-size: 1.5rem; font-weight: 700; color: ${totalProfit >= 0 ? '#00ff88' : '#ff4444'};">
-                                Profit: $${totalProfit.toFixed(2)} (${percentReturn}%)
+                                Profit: $${formatCurrency(totalProfit)} (${percentReturn}%)
                             </div>
                         </div>
                         <table>
@@ -3454,7 +3454,7 @@
                                             <td><span class="type-badge ${trade.type}">${trade.type.toUpperCase()}</span></td>
                                             <td>${formatDate(trade.dateOpened)}</td>
                                             <td>${formatDate(trade.expDate)}</td>
-                                            <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                                            <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${formatCurrency(pl)}</td>
                                             <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${trade.info || '-'}</td>
                                         </tr>
                                     `;
@@ -3675,7 +3675,7 @@
                                 <td>${formatDate(trade.expDate)}</td>
                                 <td>${cashRequired > 0 ? '$' + cashRequired.toLocaleString() : '-'}</td>
                                 <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
-                                <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                                <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${formatCurrency(pl)}</td>
                                 <td class="${rollCredit !== null ? (rollCredit >= 0 ? 'positive-value' : 'negative-value') : ''}">${rollCredit !== null ? '$' + rollCredit.toFixed(2) : '-'}</td>
                                 <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${trade.closingNotes || trade.info || '-'}</td>
                                 <td style="color: #00ff88;"><strong>${trade.tradeRef || '-'}</strong></td>
@@ -3726,7 +3726,7 @@
                         <td>${formatDate(trade.expDate)}</td>
                         <td>${cashRequired > 0 ? '$' + cashRequired.toLocaleString() : '-'}</td>
                         <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
-                        <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                        <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${formatCurrency(pl)}</td>
                         <td class="${rollCredit !== null ? (rollCredit >= 0 ? 'positive-value' : 'negative-value') : ''}">${rollCredit !== null ? '$' + rollCredit.toFixed(2) : '-'}</td>
                         <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${trade.closingNotes || trade.info || '-'}</td>
                         <td style="color: #00ff88;"><strong>${trade.tradeRef || '-'}</strong></td>
@@ -3864,7 +3864,7 @@
                             <div class="table-title">${group.name}</div>
                             <div style="display: flex; gap: 10px; align-items: center;">
                                 <div style="font-size: 1.5rem; font-weight: 700; color: ${totalProfit >= 0 ? '#00ff88' : '#ff4444'};">
-                                    Profit: $${totalProfit.toFixed(2)} (${percentReturn}%)
+                                    Profit: $${formatCurrency(totalProfit)} (${percentReturn}%)
                                 </div>
                                 <button class="btn-small" onclick="editGroup(${actualGroupIndex})">Edit</button>
                                 <button class="btn-small danger" onclick="deleteGroup(${actualGroupIndex})">Delete</button>
@@ -3920,7 +3920,7 @@
                                             <td class="${parseFloat(returnPercent) >= 0 ? 'positive-value' : 'negative-value'}">${returnPercent}%</td>
                                             <td>$${(trade.priceAtAction || 0).toFixed(2)}</td>
                                             <td class="${parseFloat(otm) >= 0 ? 'positive-value' : 'negative-value'}">${otm}%</td>
-                                            <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${pl.toFixed(2)}</td>
+                                            <td class="${pl >= 0 ? 'positive-value' : 'negative-value'}">$${formatCurrency(pl)}</td>
                                             <td>${trade.info || '-'}</td>
                                             <td style="color: #00ff88;"><strong>${trade.tradeRef || '-'}</strong></td>
                                             <td>${trade.account || '-'}</td>
@@ -4450,7 +4450,7 @@
 
             // Update stats
             document.getElementById('totalCollateral').textContent = `$${totalCollateral.toLocaleString()}`;
-            document.getElementById('totalPL').textContent = `$${totalPL.toFixed(2)}`;
+            document.getElementById('totalPL').textContent = `$${formatCurrency(totalPL)}`;
             document.getElementById('totalPL').className = `stat-value ${totalPL >= 0 ? 'positive' : 'negative'}`;
             document.getElementById('overallReturn').textContent = `${overallReturn}%`;
             document.getElementById('overallReturn').className = `stat-value ${parseFloat(overallReturn) >= 0 ? 'positive' : 'negative'}`;
@@ -4633,8 +4633,8 @@
                 }
 
                 // Update Quick Stats
-                document.getElementById('bestTrade').textContent = `$${bestTrade.toFixed(2)}`;
-                document.getElementById('worstTrade').textContent = `$${worstTrade.toFixed(2)}`;
+                document.getElementById('bestTrade').textContent = `$${formatCurrency(bestTrade)}`;
+                document.getElementById('worstTrade').textContent = `$${formatCurrency(worstTrade)}`;
                 document.getElementById('avgTradePL').textContent = `$${avgTradePL}`;
                 document.getElementById('avgTradePL').className = parseFloat(avgTradePL) >= 0 ? 'positive-value' : 'negative-value';
                 
@@ -4822,7 +4822,7 @@
                 html += `
                     <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px;">
                         <div style="font-size: 0.9rem; font-weight: 600; color: ${color};">
-                            $${week.premium.toFixed(0)}
+                            $${formatCurrency(week.premium).split('.')[0]}
                         </div>
                         <div style="width: 100%; background: ${color}; height: ${Math.abs(barHeight)}px; border-radius: 4px 4px 0 0; transition: all 0.3s; cursor: pointer;" title="${week.trades} trades">
                         </div>
@@ -4859,20 +4859,20 @@
                         <td>${parts[0]}</td>
                         <td>${parts[1]}</td>
                         <td class="${week.premium >= 0 ? 'positive-value' : 'negative-value'}" style="font-weight: 600;">
-                            $${week.premium.toFixed(2)}
+                            $${formatCurrency(week.premium)}
                         </td>
                         <td>${week.trades}</td>
-                        <td>$${avgPerTrade.toFixed(2)}</td>
+                        <td>$${formatCurrency(avgPerTrade)}</td>
                     </tr>
                 `;
             }).join('') + `
                 <tr style="background: #1a1a1a; font-weight: bold; border-top: 2px solid #00ff88;">
                     <td colspan="2" style="text-align: right;">TOTALS:</td>
                     <td class="${totalPremium >= 0 ? 'positive-value' : 'negative-value'}">
-                        $${totalPremium.toFixed(2)}
+                        $${formatCurrency(totalPremium)}
                     </td>
                     <td>${totalTrades}</td>
-                    <td>$${(totalPremium / totalTrades).toFixed(2)}</td>
+                    <td>$${formatCurrency(totalPremium / totalTrades)}</td>
                 </tr>
             `;
         }
@@ -4894,11 +4894,11 @@
                     <div class="metric-card" style="border-left: 4px solid ${color};">
                         <div style="font-size: 0.85rem; color: #888; margin-bottom: 8px;">${weekLabel}</div>
                         <div style="font-size: 2rem; font-weight: 700; color: ${color}; margin-bottom: 10px;">
-                            $${week.premium.toFixed(0)}
+                            $${formatCurrency(week.premium).split('.')[0]}
                         </div>
                         <div style="font-size: 0.9rem; color: #666;">
                             ${week.trades} trade${week.trades !== 1 ? 's' : ''}<br>
-                            <span style="color: #888;">Avg: $${avgPerTrade.toFixed(2)}</span>
+                            <span style="color: #888;">Avg: $${formatCurrency(avgPerTrade)}</span>
                         </div>
                     </div>
                 `;
@@ -4925,6 +4925,11 @@
         function formatDate(dateString) {
             const date = new Date(dateString + 'T00:00:00');
             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function formatCurrency(amount) {
+            // Format number with commas and 2 decimal places
+            return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
         function editTrade(index) {
@@ -5459,7 +5464,7 @@
             renderStockPositions();
             updateStats();
             
-            alert(`✅ Covered Call Sold!\n\n${contracts} call contract(s) at $${strike.toFixed(2)}\nPremium: $${premiumTotal.toFixed(2)}\n\nThe call now appears in:\n- Stock Positions (covered calls)\n- Open Positions\n- All Trades`);
+            alert(`✅ Covered Call Sold!\n\n${contracts} call contract(s) at $${strike.toFixed(2)}\nPremium: $${formatCurrency(premiumTotal)}\n\nThe call now appears in:\n- Stock Positions (covered calls)\n- Open Positions\n- All Trades`);
         }
 
         function confirmAssign() {
@@ -5587,7 +5592,7 @@
                         <div style="padding: 5px 0; border-bottom: 1px solid #333;">
                             <strong>$${call.strike.toFixed(2)} Call</strong> - 
                             Exp: ${formatDate(call.expDate)} - 
-                            <span style="color: #00ff88;">+$${call.premium.toFixed(2)}</span>
+                            <span style="color: #00ff88;">+$${formatCurrency(call.premium)}</span>
                             ${call.notes ? `<br><span style="font-size: 0.8rem; color: #888;">${call.notes}</span>` : ''}
                         </div>
                     `).join('');
@@ -5605,7 +5610,7 @@
                             <div style="padding: 5px; background: #1a1a1a; border-radius: 4px; margin-bottom: 5px;">
                                 <strong style="color: #888;">Original PUT</strong><br>
                                 Strike: $${stock.originalPut.strike.toFixed(2)}<br>
-                                Premium: <span style="color: #00ff88;">+$${stock.originalPut.premiumCollected.toFixed(2)}</span><br>
+                                Premium: <span style="color: #00ff88;">+$${formatCurrency(stock.originalPut.premiumCollected)}</span><br>
                                 Opened: ${formatDate(stock.originalPut.dateOpened)}<br>
                                 <span style="font-size: 0.8rem; color: #888;">Ref: ${stock.originalPut.tradeRef || '-'}</span>
                             </div>
@@ -5630,7 +5635,7 @@
                             </div>
                             <div style="margin-top: 8px; font-size: 0.9rem; padding: 5px; background: #1a1a1a; border-radius: 4px;">
                                 <strong class="${runningPL >= 0 ? 'positive-value' : 'negative-value'}">
-                                    Running P&L: ${runningPL >= 0 ? '+' : ''}$${runningPL.toFixed(2)}
+                                    Running P&L: ${runningPL >= 0 ? '+' : ''}$${formatCurrency(runningPL)}
                                 </strong>
                             </div>
                         </td>
@@ -5846,10 +5851,10 @@
                   `Shares: ${stock.shares}\n` +
                   `Assigned Price: $${stock.assignedPrice.toFixed(2)}\n` +
                   `Sale Price: $${salePriceNum.toFixed(2)}\n\n` +
-                  `Put Premium: +$${putPremium.toFixed(2)}\n` +
-                  `Call Premiums: +$${callPremiums.toFixed(2)}\n` +
-                  `Stock Profit: ${stockProfit >= 0 ? '+' : ''}$${stockProfit.toFixed(2)}\n\n` +
-                  `💰 Total Wheel Cycle P&L: ${totalPL >= 0 ? '+' : ''}$${totalPL.toFixed(2)}\n\n` +
+                  `Put Premium: +$${formatCurrency(putPremium)}\n` +
+                  `Call Premiums: +$${formatCurrency(callPremiums)}\n` +
+                  `Stock Profit: ${stockProfit >= 0 ? '+' : ''}$${formatCurrency(Math.abs(stockProfit))}\n\n` +
+                  `💰 Total Wheel Cycle P&L: ${totalPL >= 0 ? '+' : ''}$${formatCurrency(Math.abs(totalPL))}\n\n` +
                   `Check All Trades > Assigned filter to see complete cycle!`);
         }
 
