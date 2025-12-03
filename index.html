@@ -970,11 +970,14 @@
             <div class="dashboard-metrics">
                 <!-- Win Rate Card -->
                 <div class="metric-card">
-                    <div class="metric-title">Win Rate</div>
+                    <div class="metric-title">
+                        Win Rate 
+                        <button onclick="showWinRateInfo()" style="background: none; border: none; color: #00ff88; cursor: pointer; font-size: 0.9rem; margin-left: 5px;" title="How is this calculated?">ⓘ</button>
+                    </div>
                     <div class="metric-value-large positive" id="winRate">0%</div>
                     <div class="metric-description">
                         <span id="winningTrades">0</span> winning / <span id="losingTrades">0</span> losing trades<br>
-                        Based on <span id="totalClosedTrades">0</span> closed positions
+                        Based on <span id="totalClosedTrades">0</span> closed groups
                     </div>
                 </div>
 
@@ -4522,6 +4525,15 @@
             return duplicatesRemoved;
         }
 
+        function showWinRateInfo() {
+            alert('Win Rate Calculation\n\n' +
+                'Win Rate is calculated based on fully closed trade groups using the same Ref #.\n\n' +
+                'A trade only counts once it is completely closed, including all rolls. ' +
+                'If the final result of the full position is a net profit, it is counted as a win. ' +
+                'If the final result is a net loss, or if the position ends in assignment or shares being called away, it is counted as a loss.\n\n' +
+                'Open or rolled positions that remain active are not included in the win rate.');
+        }
+
         function updateTabBadges() {
             const openCount = trades.length;
             const stockCount = stockPositions.length;
@@ -4612,38 +4624,62 @@
 
         function updateDashboardMetrics() {
             try {
-                // Calculate Win Rate
+                // Calculate Win Rate based on CLOSED TRADE GROUPS
                 let winningTrades = 0;
                 let losingTrades = 0;
-                let totalClosedCount = 0;
+                let totalClosedGroups = 0;
                 let bestTrade = 0;
                 let worstTrade = 0;
                 let totalClosedPL = 0;
 
-                closedTrades.forEach(trade => {
-                    // Skip special trades (assignment, called away, closing trades)
-                    if (trade.isAssignment || trade.isCalledAway || trade.isClosingTrade) return;
-                    
-                    const pl = calculatePL(trade);
-                    totalClosedCount++;
-                    totalClosedPL += pl;
-                    
-                    if (pl > 0) winningTrades++;
-                    else if (pl < 0) losingTrades++;
-                    
-                    if (pl > bestTrade) bestTrade = pl;
-                    if (pl < worstTrade) worstTrade = pl;
+                // Get all closed groups
+                const closedGroups = tradeGroups.filter(group => {
+                    // A group is closed if it has no open trades
+                    return !group.trades.some(t => trades.some(openTrade => openTrade.id === t.id));
                 });
 
-                const winRate = totalClosedCount > 0 ? ((winningTrades / totalClosedCount) * 100).toFixed(1) : 0;
-                const avgTradePL = totalClosedCount > 0 ? (Math.round((totalClosedPL / totalClosedCount) * 100) / 100).toFixed(2) : '0.00';
+                closedGroups.forEach(group => {
+                    // Calculate total P&L for this group
+                    let groupPL = 0;
+                    let hasAssignment = false;
+                    let hasCalledAway = false;
+                    
+                    group.trades.forEach(trade => {
+                        if (trade.isAssignment) hasAssignment = true;
+                        if (trade.isCalledAway) hasCalledAway = true;
+                        
+                        const pl = calculatePL(trade);
+                        groupPL += pl;
+                    });
+                    
+                    totalClosedGroups++;
+                    totalClosedPL += groupPL;
+                    
+                    // Assignment or Called Away = Loss
+                    if (hasAssignment || hasCalledAway) {
+                        losingTrades++;
+                    }
+                    // Otherwise, check if net profit or loss
+                    else if (groupPL > 0) {
+                        winningTrades++;
+                    } else if (groupPL < 0) {
+                        losingTrades++;
+                    }
+                    // groupPL === 0 counts as neither win nor loss
+                    
+                    if (groupPL > bestTrade) bestTrade = groupPL;
+                    if (groupPL < worstTrade) worstTrade = groupPL;
+                });
+
+                const winRate = totalClosedGroups > 0 ? ((winningTrades / totalClosedGroups) * 100).toFixed(1) : 0;
+                const avgTradePL = totalClosedGroups > 0 ? (Math.round((totalClosedPL / totalClosedGroups) * 100) / 100).toFixed(2) : '0.00';
 
                 // Update Win Rate
                 document.getElementById('winRate').textContent = `${winRate}%`;
                 document.getElementById('winRate').className = `metric-value-large ${parseFloat(winRate) >= 50 ? 'positive' : 'negative'}`;
                 document.getElementById('winningTrades').textContent = winningTrades;
                 document.getElementById('losingTrades').textContent = losingTrades;
-                document.getElementById('totalClosedTrades').textContent = totalClosedCount;
+                document.getElementById('totalClosedTrades').textContent = totalClosedGroups;
 
                 // Calculate Average Days to Expiration
                 let totalDTE = 0;
@@ -6849,9 +6885,36 @@
                            closedTrades.filter(t => !t.isClosingTrade).reduce((sum, t) => sum + calculatePL(t), 0);
             const totalCollateral = trades.reduce((sum, t) => sum + calculateCashRequired(t), 0);
             const openCount = trades.length;
-            const closedCount = closedTrades.filter(t => !t.isClosingTrade).length;
-            const winningTrades = closedTrades.filter(t => !t.isClosingTrade && !t.isAssignment && !t.isCalledAway && calculatePL(t) > 0).length;
-            const losingTrades = closedTrades.filter(t => !t.isClosingTrade && !t.isAssignment && !t.isCalledAway && calculatePL(t) < 0).length;
+            
+            // Calculate Win Rate based on CLOSED TRADE GROUPS
+            const closedGroups = tradeGroups.filter(group => {
+                return !group.trades.some(t => trades.some(openTrade => openTrade.id === t.id));
+            });
+            
+            let winningTrades = 0;
+            let losingTrades = 0;
+            
+            closedGroups.forEach(group => {
+                let groupPL = 0;
+                let hasAssignment = false;
+                let hasCalledAway = false;
+                
+                group.trades.forEach(trade => {
+                    if (trade.isAssignment) hasAssignment = true;
+                    if (trade.isCalledAway) hasCalledAway = true;
+                    groupPL += calculatePL(trade);
+                });
+                
+                if (hasAssignment || hasCalledAway) {
+                    losingTrades++;
+                } else if (groupPL > 0) {
+                    winningTrades++;
+                } else if (groupPL < 0) {
+                    losingTrades++;
+                }
+            });
+            
+            const closedCount = closedGroups.length;
             const winRate = closedCount > 0 ? ((winningTrades / closedCount) * 100).toFixed(1) : 0;
             
             const summaryData = [
