@@ -1632,6 +1632,32 @@
         </div>
     </div>
 
+    <!-- Win Rate Info Modal -->
+    <div class="modal" id="winRateInfoModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <div class="modal-title">How is Win Rate Calculated?</div>
+                <button class="close-btn" onclick="closeWinRateInfo()">×</button>
+            </div>
+            <div style="padding: 20px; line-height: 1.6; color: #ccc;">
+                <p style="margin-bottom: 15px;">
+                    Win Rate is calculated based on <strong style="color: #00ff88;">fully closed trade groups</strong> using the same Ref #.
+                </p>
+                <p style="margin-bottom: 15px;">
+                    A trade only counts once it is <strong>completely closed</strong>, including all rolls. 
+                </p>
+                <ul style="margin: 15px 0; padding-left: 20px;">
+                    <li style="margin-bottom: 10px;">If the final result of the full position is a <strong style="color: #00ff88;">net profit</strong>, it is counted as a <strong>win</strong>.</li>
+                    <li style="margin-bottom: 10px;">If the final result is a <strong style="color: #ff4444;">net loss</strong>, or if the position ends in <strong>assignment</strong> or shares being <strong>called away</strong>, it is counted as a <strong>loss</strong>.</li>
+                    <li style="margin-bottom: 10px;">Open or rolled positions that remain active are <strong>not included</strong> in the win rate.</li>
+                </ul>
+            </div>
+            <div style="text-align: center; padding: 0 20px 20px;">
+                <button class="primary" onclick="closeWinRateInfo()">Got it</button>
+            </div>
+        </div>
+    </div>
+
     <!-- New Trade Modal -->
     <div class="modal" id="tradeModal">
         <div class="modal-content" style="max-width: 800px;">
@@ -2244,6 +2270,12 @@
             const btn = document.getElementById('settingsMenuBtn');
             if (menu && btn && !menu.contains(event.target) && !btn.contains(event.target)) {
                 menu.classList.add('hidden');
+            }
+            
+            // Close win rate info modal when clicking outside
+            const winRateModal = document.getElementById('winRateInfoModal');
+            if (winRateModal && winRateModal.classList.contains('active') && event.target === winRateModal) {
+                closeWinRateInfo();
             }
         });
 
@@ -4526,12 +4558,11 @@
         }
 
         function showWinRateInfo() {
-            alert('Win Rate Calculation\n\n' +
-                'Win Rate is calculated based on fully closed trade groups using the same Ref #.\n\n' +
-                'A trade only counts once it is completely closed, including all rolls. ' +
-                'If the final result of the full position is a net profit, it is counted as a win. ' +
-                'If the final result is a net loss, or if the position ends in assignment or shares being called away, it is counted as a loss.\n\n' +
-                'Open or rolled positions that remain active are not included in the win rate.');
+            document.getElementById('winRateInfoModal').classList.add('active');
+        }
+
+        function closeWinRateInfo() {
+            document.getElementById('winRateInfoModal').classList.remove('active');
         }
 
         function updateTabBadges() {
