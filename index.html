@@ -1854,6 +1854,7 @@
             renderAllTrades();
             renderStockPositions();
             updateStats();
+            updateTabBadges(); // Update badges immediately
             
             // Ensure badges are updated after everything loads
             setTimeout(() => {
@@ -4502,7 +4503,7 @@
             
             if (duplicatesRemoved > 0) {
                 console.log(`Cleaned up ${duplicatesRemoved} duplicate trade reference(s)`);
-                saveTrades();
+                saveUserData();
             }
             
             return duplicatesRemoved;
