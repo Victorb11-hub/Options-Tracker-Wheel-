@@ -6316,6 +6316,7 @@
                     'Premium': 2.50,
                     'Action': 'sell',
                     'Type': 'put',
+                    'Status': 'open',
                     'Date Opened': '2024-12-01',
                     'Exp Date': '2024-12-15',
                     'Price At Action': 152.50,
@@ -6330,7 +6331,9 @@
                     'Premium': 0.50,
                     'Action': 'buy',
                     'Type': 'put',
+                    'Status': 'closed',
                     'Date Opened': '2024-12-10',
+                    'Date Closed': '2024-12-10',
                     'Exp Date': '2024-12-15',
                     'Price At Action': 148.00,
                     'Info': 'Closing position - profit',
@@ -6344,26 +6347,30 @@
                     'Premium': 3.00,
                     'Action': 'sell',
                     'Type': 'put',
+                    'Status': 'closed',
                     'Date Opened': '2024-11-20',
+                    'Date Closed': '2024-11-28',
                     'Exp Date': '2024-12-20',
                     'Price At Action': 225.00,
-                    'Info': 'Initial position',
+                    'Info': 'Expired worthless - kept full premium',
                     'Trade Ref': '2',
                     'Account': 'IRA'
                 },
                 {
-                    'Symbol': 'TSLA',
-                    'Contracts': 2,
-                    'Strike': 225.00,
-                    'Premium': 1.50,
-                    'Action': 'roll',
+                    'Symbol': 'MSFT',
+                    'Contracts': 1,
+                    'Strike': 0,
+                    'Premium': 1.25,
+                    'Action': 'sell',
                     'Type': 'put',
-                    'Date Opened': '2024-12-05',
-                    'Exp Date': '2024-12-27',
-                    'Price At Action': 223.00,
-                    'Info': 'Rolled up and out',
-                    'Trade Ref': '2',
-                    'Account': 'IRA'
+                    'Status': 'closed',
+                    'Date Opened': '2024-11-15',
+                    'Date Closed': '2024-11-22',
+                    'Exp Date': '',
+                    'Price At Action': 0,
+                    'Info': 'Expired worthless - no strike/exp needed',
+                    'Trade Ref': '4',
+                    'Account': 'Main'
                 },
                 {
                     'Symbol': 'NVDA',
@@ -6372,25 +6379,12 @@
                     'Premium': 0.99,
                     'Action': 'sell',
                     'Type': 'put',
+                    'Status': 'open',
                     'Date Opened': '2024-11-25',
                     'Exp Date': '2024-12-05',
                     'Price At Action': 172.65,
-                    'Info': 'Quick trade',
-                    'Trade Ref': '3',
-                    'Account': 'Roth IRA'
-                },
-                {
-                    'Symbol': 'NVDA',
-                    'Contracts': 1,
-                    'Strike': 155.00,
-                    'Premium': 0.22,
-                    'Action': 'buy',
-                    'Type': 'put',
-                    'Date Opened': '2024-11-26',
-                    'Exp Date': '2024-12-05',
-                    'Price At Action': 168.50,
-                    'Info': 'Closed for 80% profit in one day',
-                    'Trade Ref': '3',
+                    'Info': 'Currently open position',
+                    'Trade Ref': '5',
                     'Account': 'Roth IRA'
                 }
             ];
@@ -6424,7 +6418,9 @@
                 { wch: 10 },  // Premium
                 { wch: 10 },  // Action
                 { wch: 8 },   // Type
+                { wch: 10 },  // Status
                 { wch: 15 },  // Date Opened
+                { wch: 15 },  // Date Closed
                 { wch: 15 },  // Exp Date
                 { wch: 15 },  // Price At Action
                 { wch: 30 },  // Info
@@ -6443,31 +6439,45 @@
                 ['Required Columns:'],
                 ['- Symbol: Stock ticker (e.g., AAPL, TSLA)'],
                 ['- Contracts: Number of contracts (e.g., 1, 2)'],
-                ['- Strike: Strike price (e.g., 150.00)'],
                 ['- Premium: Premium per share (e.g., 2.50)'],
-                ['- Action: sell, buy, or roll'],
+                ['- Action: sell or buy'],
                 ['- Type: put or call'],
+                ['- Status: open or closed'],
                 ['- Date Opened: Format YYYY-MM-DD (e.g., 2024-12-01)'],
-                ['- Exp Date: Format YYYY-MM-DD (e.g., 2024-12-15)'],
                 [''],
                 ['Optional Columns:'],
+                ['- Strike: Strike price (can be 0 or blank for expired worthless)'],
+                ['- Exp Date: Format YYYY-MM-DD (can be blank if expired/not applicable)'],
+                ['- Date Closed: Format YYYY-MM-DD (required if Status is closed)'],
                 ['- Price At Action: Stock price when trade opened'],
                 ['- Info: Notes about the trade'],
                 ['- Trade Ref: Reference number to link trades (e.g., 1, 2, 3)'],
                 ['- Account: Account name (e.g., Main, IRA, Roth IRA)'],
                 [''],
+                ['Status Field (NEW!):'],
+                ['- open: Position is currently open'],
+                ['- closed: Position has been closed (include Date Closed)'],
+                ['- This ensures positions import with correct status'],
+                [''],
+                ['Strike & Exp Date:'],
+                ['- Can use $0.00 or leave blank for expired worthless positions'],
+                ['- Exp Date can be blank if not applicable'],
+                ['- System will handle missing/zero values'],
+                [''],
                 ['Action Types:'],
-                ['- sell: Opens a new position'],
-                ['- buy: Closes a matching sell position (same Trade Ref + Strike)'],
-                ['- roll: Closes old position AND opens new position (same Trade Ref)'],
+                ['- sell: Opens or reopens a position (use Status to indicate open/closed)'],
+                ['- buy: Closes a position (use Status=closed and Date Closed)'],
                 [''],
                 ['Examples in the "Trades" sheet:'],
-                ['1. AAPL - Sell put, then buy it back (closed position)'],
-                ['2. TSLA - Sell put, then roll to new strike/date (keeps same Trade Ref)'],
-                ['3. NVDA - Sell put, then buy back for quick profit'],
+                ['1. AAPL - Sell put (Status=open), then buy back (Status=closed)'],
+                ['2. TSLA - Sell put that expired worthless (Status=closed, Date Closed)'],
+                ['3. MSFT - Expired worthless with $0 strike and no exp date'],
+                ['4. NVDA - Currently open position (Status=open)'],
                 [''],
                 ['Tips:'],
                 ['- Use Trade Ref numbers to link related trades (1, 2, 3, etc.)'],
+                ['- Always set Status=closed for completed trades'],
+                ['- Add Date Closed for all closed trades'],
                 ['- Rows are processed in order, so put trades chronologically'],
                 ['- Delete these example rows and add your own trades'],
                 ['- Save as .xlsx or .csv format']
@@ -6879,14 +6889,15 @@
                     // Required fields
                     const symbol = String(row.Symbol || row.symbol || '').trim().toUpperCase();
                     const contracts = parseInt(row.Contracts || row.contracts);
-                    const strike = parseFloat(row.Strike || row.strike);
                     const premium = parseFloat(row.Premium || row.premium);
                     const action = String(row.Action || row.action || '').toLowerCase();
                     const type = String(row.Type || row.type || '').toLowerCase();
                     const dateOpened = row['Date Opened'] || row.dateOpened || row['Date_Opened'];
-                    const expDate = row['Exp Date'] || row.expDate || row['Exp_Date'];
+                    const status = String(row.Status || row.status || 'open').toLowerCase();
                     
-                    // Optional fields
+                    // Optional fields (can be blank/zero)
+                    const strike = parseFloat(row.Strike || row.strike || 0);
+                    const expDate = row['Exp Date'] || row.expDate || row['Exp_Date'] || '';
                     const priceAtAction = parseFloat(row['Price At Action'] || row.priceAtAction || row['Price_At_Action'] || 0);
                     const info = String(row.Info || row.info || row.Notes || row.notes || '');
                     const tradeRef = String(row['Trade Ref'] || row.tradeRef || row['Trade_Ref'] || '').trim();
@@ -6903,34 +6914,34 @@
                         errors.push(`Row ${rowNum}: Invalid contracts`);
                         return;
                     }
-                    if (!strike || isNaN(strike)) {
-                        errors.push(`Row ${rowNum}: Invalid strike`);
-                        return;
-                    }
                     if (isNaN(premium)) {
                         errors.push(`Row ${rowNum}: Invalid premium`);
                         return;
                     }
-                    if (action !== 'sell' && action !== 'buy' && action !== 'roll') {
-                        errors.push(`Row ${rowNum}: Action must be 'sell', 'buy', or 'roll'`);
+                    if (action !== 'sell' && action !== 'buy') {
+                        errors.push(`Row ${rowNum}: Action must be 'sell' or 'buy'`);
                         return;
                     }
                     if (type !== 'put' && type !== 'call') {
                         errors.push(`Row ${rowNum}: Type must be 'put' or 'call'`);
                         return;
                     }
+                    if (status !== 'open' && status !== 'closed') {
+                        errors.push(`Row ${rowNum}: Status must be 'open' or 'closed'`);
+                        return;
+                    }
                     if (!dateOpened) {
                         errors.push(`Row ${rowNum}: Missing Date Opened`);
                         return;
                     }
-                    if (!expDate) {
-                        errors.push(`Row ${rowNum}: Missing Exp Date`);
+                    if (status === 'closed' && !dateClosed) {
+                        errors.push(`Row ${rowNum}: Status is 'closed' but no Date Closed provided`);
                         return;
                     }
                     
                     // Format dates
                     const formattedDateOpened = formatExcelDate(dateOpened);
-                    const formattedExpDate = formatExcelDate(expDate);
+                    const formattedExpDate = expDate ? formatExcelDate(expDate) : formattedDateOpened;
                     const formattedDateClosed = dateClosed ? formatExcelDate(dateClosed) : '';
                     
                     // Create trade object
@@ -6938,7 +6949,7 @@
                         id: Date.now() + Math.random(),
                         symbol,
                         contracts,
-                        strike,
+                        strike: strike || 0,
                         premium,
                         action,
                         type,
@@ -6949,144 +6960,38 @@
                         tradeRef,
                         account,
                         groupId: `${symbol}-${strike}-${type}-${formattedExpDate}`,
-                        status: 'open'
+                        status: status
                     };
                     
-                    // Handle different actions
-                    if (action === 'roll' && tradeRef) {
-                        // ROLL: Close old position with same Trade Ref, then open new position
-                        const matchingSell = openTrades.find(t => 
-                            t.tradeRef === tradeRef &&
-                            t.symbol === symbol &&
-                            t.action === 'sell'
-                        );
+                    // Handle based on Status field
+                    if (status === 'closed') {
+                        trade.dateClosed = formattedDateClosed;
+                        trade.closePrice = closePrice || premium; // Use closePrice if provided, else use premium
                         
-                        if (matchingSell) {
-                            // Close the old position
-                            matchingSell.status = 'closed';
-                            matchingSell.dateClosed = formattedDateOpened;
-                            matchingSell.isRolled = true;
-                            
-                            // Create closing trade (buy back)
-                            const closingTrade = {
-                                id: Date.now() + Math.random(),
-                                symbol: matchingSell.symbol,
-                                contracts: matchingSell.contracts,
-                                strike: matchingSell.strike,
-                                premium: premium, // Use current row's premium as closing cost
-                                action: 'buy',
-                                type: matchingSell.type,
-                                dateOpened: formattedDateOpened,
-                                expDate: matchingSell.expDate,
-                                priceAtAction: priceAtAction,
-                                info: 'Roll close',
-                                tradeRef: tradeRef,
-                                account: account,
-                                groupId: matchingSell.groupId,
-                                status: 'closed',
-                                dateClosed: formattedDateOpened,
-                                isClosingTrade: true,
-                                isRolled: true
-                            };
-                            
-                            // Move old position to closed
-                            closedTrades.push(matchingSell);
-                            closedTrades.push(closingTrade);
-                            const sellIndex = openTrades.indexOf(matchingSell);
-                            openTrades.splice(sellIndex, 1);
-                            
-                            // Create new rolled position (from current row's strike/exp)
-                            const newRolledPosition = {
-                                id: Date.now() + Math.random() + 1,
-                                symbol,
-                                contracts,
-                                strike, // New strike from current row
-                                premium: 0, // Will need separate row for new premium collected
-                                action: 'sell',
-                                type,
-                                dateOpened: formattedDateOpened,
-                                expDate: formattedExpDate, // New exp date
-                                priceAtAction,
-                                info: `Rolled from $${matchingSell.strike}`,
-                                tradeRef,
-                                account,
-                                groupId: `${symbol}-${strike}-${type}-${formattedExpDate}`,
-                                status: 'open',
-                                isRolled: true
-                            };
-                            openTrades.push(newRolledPosition);
-                            
-                            // Add to group
-                            let group = tradeGroups.find(g => g.name === `Trade Ref: ${tradeRef}`);
-                            if (group) {
-                                group.trades.push(matchingSell);
-                                group.trades.push(closingTrade);
-                            } else {
-                                tradeGroups.push({
-                                    id: Date.now() + Math.random(),
-                                    name: `Trade Ref: ${tradeRef}`,
-                                    trades: [matchingSell, closingTrade],
-                                    created: new Date().toISOString()
-                                });
-                            }
-                        } else {
-                            // Roll without matching sell - treat as new position
-                            trade.isRolled = true;
-                            openTrades.push(trade);
-                        }
-                    } else if (action === 'buy' && tradeRef) {
-                        // BUY: Close matching SELL with same Trade Ref + Strike
-                        const matchingSell = openTrades.find(t => 
-                            t.tradeRef === tradeRef &&
-                            t.symbol === symbol &&
-                            t.action === 'sell' &&
-                            t.strike === strike
-                        );
+                        // Add to closedTrades
+                        closedTrades.push(trade);
                         
-                        if (matchingSell) {
-                            // Close the position
-                            matchingSell.status = 'closed';
-                            matchingSell.dateClosed = formattedDateClosed || formattedDateOpened;
-                            matchingSell.closePrice = premium;
-                            
-                            // Move to closed trades
-                            closedTrades.push(matchingSell);
-                            const sellIndex = openTrades.indexOf(matchingSell);
-                            openTrades.splice(sellIndex, 1);
-                            
-                            // Add closing trade
-                            trade.status = 'closed';
-                            trade.dateClosed = formattedDateClosed || formattedDateOpened;
+                        // If it's a BUY action, mark as closing trade
+                        if (action === 'buy') {
                             trade.isClosingTrade = true;
-                            closedTrades.push(trade);
-                            
-                            // Create or update group
+                        }
+                        
+                        // Create or update group if tradeRef exists
+                        if (tradeRef) {
                             let group = tradeGroups.find(g => g.name === `Trade Ref: ${tradeRef}`);
                             if (group) {
-                                group.trades.push(matchingSell);
                                 group.trades.push(trade);
                             } else {
                                 tradeGroups.push({
                                     id: Date.now() + Math.random(),
                                     name: `Trade Ref: ${tradeRef}`,
-                                    trades: [matchingSell, trade],
+                                    trades: [trade],
                                     created: new Date().toISOString()
                                 });
                             }
-                        } else {
-                            // BUY without matching SELL - add as closed trade
-                            trade.status = 'closed';
-                            trade.dateClosed = formattedDateClosed || formattedDateOpened;
-                            closedTrades.push(trade);
                         }
-                    } else if (dateClosed || closePrice > 0) {
-                        // Explicitly closed trade
-                        trade.status = 'closed';
-                        trade.dateClosed = formattedDateClosed || formattedDateOpened;
-                        trade.closePrice = closePrice;
-                        closedTrades.push(trade);
                     } else {
-                        // SELL or open trade
+                        // Status is 'open'
                         openTrades.push(trade);
                     }
                     
