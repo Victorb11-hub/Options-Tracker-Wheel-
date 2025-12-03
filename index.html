@@ -928,7 +928,7 @@
                 <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
                 <button class="tab" onclick="switchTab('open')">Open Positions <span class="tab-badge" id="tabOpenCount">0</span></button>
                 <button class="tab" onclick="switchTab('groups')">Closed Groups <span class="tab-badge" id="tabGroupsCount">0</span></button>
-                <button class="tab" onclick="switchTab('all')">All Trades</button>
+                <button class="tab" onclick="switchTab('all')">All Trades <span class="tab-badge" id="tabAllCount">0</span></button>
                 <button class="tab" onclick="switchTab('stock')">Stock Positions <span class="tab-badge" id="tabStockCount">0</span></button>
             </div>
             <div style="display: flex; gap: 10px; padding-bottom: 12px; align-items: center;">
@@ -4478,11 +4478,15 @@
             const stockCount = stockPositions.length;
             const groupsCount = getClosedGroupsCount(); // Use helper function instead
             
-            console.log('Updating tab badges:', { openCount, stockCount, groupsCount });
+            // Count ALL trades: open + closed (including isClosingTrade entries)
+            const allTradesCount = trades.length + closedTrades.length;
+            
+            console.log('Updating tab badges:', { openCount, stockCount, groupsCount, allTradesCount });
             
             const tabOpenBadge = document.getElementById('tabOpenCount');
             const tabStockBadge = document.getElementById('tabStockCount');
             const tabGroupsBadge = document.getElementById('tabGroupsCount');
+            const tabAllBadge = document.getElementById('tabAllCount');
             
             if (tabOpenBadge) {
                 tabOpenBadge.textContent = openCount;
@@ -4495,6 +4499,10 @@
             if (tabGroupsBadge) {
                 tabGroupsBadge.textContent = groupsCount;
                 console.log('Set groups badge to:', groupsCount);
+            }
+            if (tabAllBadge) {
+                tabAllBadge.textContent = allTradesCount;
+                console.log('Set all trades badge to:', allTradesCount);
             }
         }
 
