@@ -4859,27 +4859,72 @@
             today.setHours(0, 0, 0, 0);
             const currentWeekStart = getWeekStart(today);
             
+            let startWeek, endWeek;
+            
             if (rangeFilter === 'prev4next4') {
                 // Show previous 4 weeks and next 4 weeks (8 weeks total)
-                const fourWeeksAgo = new Date(currentWeekStart);
-                fourWeeksAgo.setDate(fourWeeksAgo.getDate() - (7 * 4)); // 4 weeks back
+                startWeek = new Date(currentWeekStart);
+                startWeek.setDate(startWeek.getDate() - (7 * 4)); // 4 weeks back
                 
-                const fourWeeksAhead = new Date(currentWeekStart);
-                fourWeeksAhead.setDate(fourWeeksAhead.getDate() + (7 * 4)); // 4 weeks forward
+                endWeek = new Date(currentWeekStart);
+                endWeek.setDate(endWeek.getDate() + (7 * 4)); // 4 weeks forward
                 
                 weeksArray = weeksArray.filter(w => 
-                    w.weekStart >= fourWeeksAgo && w.weekStart < fourWeeksAhead
+                    w.weekStart >= startWeek && w.weekStart < endWeek
                 );
             } else if (rangeFilter.startsWith('next')) {
                 // Forward-looking: show only future weeks
                 const weeksToShow = parseInt(rangeFilter.replace('next', ''));
+                startWeek = new Date(currentWeekStart);
+                endWeek = new Date(currentWeekStart);
+                endWeek.setDate(endWeek.getDate() + (7 * weeksToShow));
+                
                 weeksArray = weeksArray.filter(w => w.weekStart >= currentWeekStart);
                 weeksArray = weeksArray.slice(0, weeksToShow);
             } else if (rangeFilter !== 'all') {
                 // Backward-looking: show only past weeks
                 const weeksToShow = parseInt(rangeFilter);
+                startWeek = new Date(currentWeekStart);
+                startWeek.setDate(startWeek.getDate() - (7 * weeksToShow));
+                endWeek = new Date(currentWeekStart);
+                
                 weeksArray = weeksArray.filter(w => w.weekStart < currentWeekStart);
                 weeksArray = weeksArray.slice(-weeksToShow); // Get last N weeks
+            }
+            
+            // Fill in missing weeks with $0 placeholders (only if not "all")
+            if (rangeFilter !== 'all' && startWeek && endWeek) {
+                const filledWeeks = [];
+                const existingWeeksMap = {};
+                
+                // Map existing weeks by their ISO string
+                weeksArray.forEach(w => {
+                    existingWeeksMap[w.weekStart.toISOString()] = w;
+                });
+                
+                // Generate all weeks in range
+                let currentWeek = new Date(startWeek);
+                while (currentWeek < endWeek) {
+                    const weekKey = currentWeek.toISOString();
+                    
+                    if (existingWeeksMap[weekKey]) {
+                        // Week has data
+                        filledWeeks.push(existingWeeksMap[weekKey]);
+                    } else {
+                        // Week has no data - create placeholder
+                        filledWeeks.push({
+                            premium: 0,
+                            trades: 0,
+                            weekStart: new Date(currentWeek),
+                            weekEnd: getWeekEnd(new Date(currentWeek))
+                        });
+                    }
+                    
+                    // Move to next week
+                    currentWeek.setDate(currentWeek.getDate() + 7);
+                }
+                
+                weeksArray = filledWeeks;
             }
             
             // Return in chronological order
