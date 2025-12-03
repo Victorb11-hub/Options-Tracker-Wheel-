@@ -1839,6 +1839,10 @@
             document.getElementById('trackerApp').classList.remove('hidden');
             // Load user's specific data
             loadUserData();
+            
+            // Clean up any duplicate trade references in groups
+            cleanupDuplicateGroupTrades();
+            
             loadCustomAccounts();
             setTodayDate();
             
@@ -4473,13 +4477,61 @@
             }
         }
 
+        // Clean up duplicate trade references in groups (same ID appearing multiple times)
+        function cleanupDuplicateGroupTrades() {
+            let duplicatesRemoved = 0;
+            
+            tradeGroups.forEach(group => {
+                if (group.trades && Array.isArray(group.trades)) {
+                    const seenIds = new Set();
+                    const uniqueTrades = [];
+                    
+                    group.trades.forEach(trade => {
+                        if (trade.id && !seenIds.has(trade.id)) {
+                            seenIds.add(trade.id);
+                            uniqueTrades.push(trade);
+                        } else if (trade.id && seenIds.has(trade.id)) {
+                            duplicatesRemoved++;
+                            console.log('Removed duplicate reference:', trade.symbol, trade.action, '$' + trade.premium, 'ID:', trade.id);
+                        }
+                    });
+                    
+                    group.trades = uniqueTrades;
+                }
+            });
+            
+            if (duplicatesRemoved > 0) {
+                console.log(`Cleaned up ${duplicatesRemoved} duplicate trade reference(s)`);
+                saveTrades();
+            }
+            
+            return duplicatesRemoved;
+        }
+
         function updateTabBadges() {
             const openCount = trades.length;
             const stockCount = stockPositions.length;
             const groupsCount = getClosedGroupsCount(); // Use helper function instead
             
-            // Count ALL trades: open + closed (including isClosingTrade entries)
-            const allTradesCount = trades.length + closedTrades.length;
+            // Count ALL trades: open + closed + orphaned trades in groups
+            // Build a Set of IDs we've already counted
+            const countedIds = new Set();
+            trades.forEach(t => { if (t.id) countedIds.add(t.id); });
+            closedTrades.forEach(t => { if (t.id) countedIds.add(t.id); });
+            
+            let allTradesCount = trades.length + closedTrades.length;
+            
+            // Add trades from groups that aren't in main arrays (orphans)
+            tradeGroups.forEach(group => {
+                if (group.trades && Array.isArray(group.trades)) {
+                    group.trades.forEach(trade => {
+                        if (trade.id && !countedIds.has(trade.id)) {
+                            allTradesCount++;
+                            countedIds.add(trade.id); // Prevent counting duplicates
+                        }
+                    });
+                }
+            });
             
             console.log('Updating tab badges:', { openCount, stockCount, groupsCount, allTradesCount });
             
