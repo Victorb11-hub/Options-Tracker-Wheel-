@@ -5310,41 +5310,116 @@
             
             const weeklyPremiums = {}; // Key: week start date string, Value: {premium, trades, weekStart, weekEnd}
             
-            // Process closed trades (filter by account)
+            // Group ALL closed trades by week, separating rolled vs non-rolled
+            const weeklyRolledTrades = {}; // Trades marked as rolled
+            const weeklyRegularTrades = {}; // Non-rolled trades
+            
             closedTrades.forEach(trade => {
-                if (trade.isClosingTrade) return; // Skip closing leg entries
-                
                 // Filter by account
                 if (accountFilter !== 'all' && trade.account !== accountFilter) return;
                 
-                const premium = trade.premium * trade.contracts * 100;
-                const closingCost = (trade.closePrice || trade.closingPremium || 0) * trade.contracts * 100;
-                const netPremium = premium - closingCost;
-                
-                let targetWeek;
-                
-                if (trade.dateClosed) {
-                    // Trade was closed early - assign to closing week
-                    targetWeek = getWeekStart(trade.dateClosed);
+                // Determine which week this trade belongs to
+                let tradeDate;
+                if (trade.isClosingTrade) {
+                    // BUY legs use dateClosed
+                    tradeDate = trade.dateClosed;
+                } else if (trade.dateClosed) {
+                    // Regular closed trades or SELL legs of rolls use dateClosed
+                    tradeDate = trade.dateClosed;
                 } else if (trade.expDate) {
-                    // Trade held to expiration - assign to exp week
-                    targetWeek = getWeekStart(trade.expDate);
+                    // Expired trades use expDate
+                    tradeDate = trade.expDate;
                 } else {
-                    return; // Skip if no date info
+                    return; // Skip if no date
                 }
                 
+                if (!tradeDate) return;
+                
+                const targetWeek = getWeekStart(tradeDate);
                 const weekKey = targetWeek.toISOString();
+                
+                // Separate rolled vs regular trades
+                if (trade.isRolled || trade.isClosingTrade) {
+                    // This is part of a roll
+                    if (!weeklyRolledTrades[weekKey]) {
+                        weeklyRolledTrades[weekKey] = {
+                            sells: [],
+                            buys: [],
+                            weekStart: targetWeek,
+                            weekEnd: getWeekEnd(targetWeek)
+                        };
+                    }
+                    
+                    if (trade.action === 'sell') {
+                        weeklyRolledTrades[weekKey].sells.push(trade);
+                    } else if (trade.action === 'buy') {
+                        weeklyRolledTrades[weekKey].buys.push(trade);
+                    }
+                } else {
+                    // Regular non-rolled trade
+                    if (!weeklyRegularTrades[weekKey]) {
+                        weeklyRegularTrades[weekKey] = [];
+                    }
+                    weeklyRegularTrades[weekKey].push(trade);
+                }
+            });
+            
+            // Process regular (non-rolled) trades
+            Object.entries(weeklyRegularTrades).forEach(([weekKey, trades]) => {
+                let weekPremium = 0;
+                
+                trades.forEach(trade => {
+                    const premium = trade.premium * trade.contracts * 100;
+                    const closingCost = (trade.closePrice || trade.closingPremium || 0) * trade.contracts * 100;
+                    weekPremium += (premium - closingCost);
+                });
+                
+                if (!weeklyPremiums[weekKey]) {
+                    const weekStart = new Date(weekKey);
+                    weeklyPremiums[weekKey] = {
+                        premium: 0,
+                        trades: 0,
+                        weekStart: weekStart,
+                        weekEnd: getWeekEnd(weekStart)
+                    };
+                }
+                
+                weeklyPremiums[weekKey].premium += weekPremium;
+                weeklyPremiums[weekKey].trades += trades.length;
+            });
+            
+            // Process rolled trades - net out SELL and BUY in each week
+            Object.entries(weeklyRolledTrades).forEach(([weekKey, weekData]) => {
+                let weekNetCredit = 0;
+                
+                // Add all SELL premiums (credits) - these are new positions opened
+                weekData.sells.forEach(sellTrade => {
+                    const sellPremium = sellTrade.premium * sellTrade.contracts * 100;
+                    weekNetCredit += sellPremium;
+                    console.log(`Week ${weekKey}: SELL ${sellTrade.symbol} $${sellTrade.strike} premium +$${sellPremium.toFixed(2)}`);
+                });
+                
+                // Subtract all BUY premiums (debits) - these are buybacks
+                weekData.buys.forEach(buyTrade => {
+                    const buyPremium = buyTrade.premium * buyTrade.contracts * 100;
+                    weekNetCredit -= buyPremium;
+                    console.log(`Week ${weekKey}: BUY ${buyTrade.symbol} $${buyTrade.strike} premium -$${buyPremium.toFixed(2)}`);
+                });
+                
+                console.log(`Week ${weekKey}: Net credit from rolls: $${weekNetCredit.toFixed(2)}`);
+                
+                // Add to weekly premiums
                 if (!weeklyPremiums[weekKey]) {
                     weeklyPremiums[weekKey] = {
                         premium: 0,
                         trades: 0,
-                        weekStart: targetWeek,
-                        weekEnd: getWeekEnd(targetWeek)
+                        weekStart: weekData.weekStart,
+                        weekEnd: weekData.weekEnd
                     };
                 }
                 
-                weeklyPremiums[weekKey].premium += netPremium;
-                weeklyPremiums[weekKey].trades += 1;
+                weeklyPremiums[weekKey].premium += weekNetCredit;
+                weeklyPremiums[weekKey].trades += Math.max(weekData.sells.length, weekData.buys.length);
             });
             
             // Process open trades (filter by account)
@@ -5354,21 +5429,13 @@
                 // Filter by account
                 if (accountFilter !== 'all' && trade.account !== accountFilter) return;
                 
-                let premiumToAdd = 0;
-                
+                // Skip open trades that are part of a roll - they're already counted in the rolled trades section
                 if (trade.isRolled) {
-                    // For rolled positions, use the roll credit
-                    const rollCredit = calculateRollCredit(trade);
-                    if (rollCredit !== null) {
-                        premiumToAdd = rollCredit;
-                    } else {
-                        // Fallback to premium if roll credit can't be calculated
-                        premiumToAdd = trade.premium * trade.contracts * 100;
-                    }
-                } else {
-                    // Regular open position - use full premium
-                    premiumToAdd = trade.premium * trade.contracts * 100;
+                    return;
                 }
+                
+                // For open NON-ROLLED trades, just use the premium collected
+                const premiumToAdd = trade.premium * trade.contracts * 100;
                 
                 const targetWeek = getWeekStart(trade.expDate);
                 const weekKey = targetWeek.toISOString();
