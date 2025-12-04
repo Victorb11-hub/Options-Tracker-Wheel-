@@ -2132,29 +2132,11 @@
                 return;
             }
             
-            // Extract all numeric Trade Ref #s and find the highest
-            let highestNumber = -1;
-            let highestRef = '';
+            // Sort by date (most recent first) to get the last used ref
+            tradesWithRef.sort((a, b) => new Date(b.dateOpened) - new Date(a.dateOpened));
+            const mostRecentRef = tradesWithRef[0].tradeRef;
             
-            tradesWithRef.forEach(trade => {
-                const ref = trade.tradeRef.trim();
-                // Try to parse as a number
-                const num = parseInt(ref);
-                
-                if (!isNaN(num) && num > highestNumber) {
-                    highestNumber = num;
-                    highestRef = ref;
-                }
-            });
-            
-            // If we found numeric refs, show the highest number
-            if (highestNumber >= 0) {
-                document.getElementById('lastRefValue').textContent = highestRef;
-            } else {
-                // If no numeric refs found, show the most recent by date
-                tradesWithRef.sort((a, b) => new Date(b.dateOpened) - new Date(a.dateOpened));
-                document.getElementById('lastRefValue').textContent = tradesWithRef[0].tradeRef;
-            }
+            document.getElementById('lastRefValue').textContent = mostRecentRef;
         }
 
         function saveUserData() {
