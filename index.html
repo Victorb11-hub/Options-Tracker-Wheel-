@@ -5319,14 +5319,16 @@
         }
 
         function calculateWeeklyPremium() {
-            // SIMPLE APPROACH: Use the Credit column that's already calculated correctly
-            // For rolled trades: Credit = net from roll
-            // For non-rolled trades: Calculate net = premium - buyback
+            // CORRECT APPROACH per user requirements:
+            // 1. Original SELL premium → goes to original exp week (NO subtraction)
+            // 2. Roll net credit (new premium - buyback) → goes to NEW exp week
+            // 3. Skip new SELL when processing (already counted as roll credit)
             
             const accountFilter = document.getElementById('dashboardAccountFilter')?.value || 'all';
             const weeklyPremiums = {};
+            const processedSells = new Set(); // Track sells that are part of a roll (to avoid double-counting)
             
-            // Process all SELL trades (skip BUY trades - they don't generate credit)
+            // Process all SELL trades
             const allSells = [
                 ...trades.filter(t => t.action === 'sell'),
                 ...closedTrades.filter(t => t.action === 'sell' && !t.isClosingTrade)
@@ -5337,38 +5339,11 @@
                 if (accountFilter !== 'all' && trade.account !== accountFilter) return;
                 if (!trade.expDate) return;
                 
-                let credit = 0;
+                // Skip if this is a new SELL after a roll (already counted as roll credit)
+                if (processedSells.has(trade.id)) return;
                 
-                if (trade.isRolled) {
-                    // For rolled trades, use calculateRollCredit which gives us the net
-                    credit = calculateRollCredit(trade);
-                    if (credit === null) {
-                        // If we can't calculate roll credit, skip this trade
-                        return;
-                    }
-                } else {
-                    // For non-rolled trades, calculate: premium - buyback cost
-                    const premium = trade.premium * trade.contracts * 100;
-                    
-                    // Find matching buyback
-                    const buyback = closedTrades.find(t =>
-                        t.isClosingTrade &&
-                        t.action === 'buy' &&
-                        t.tradeRef === trade.tradeRef &&
-                        t.symbol === trade.symbol &&
-                        t.strike === trade.strike
-                    );
-                    
-                    if (buyback) {
-                        const buybackCost = buyback.premium * buyback.contracts * 100;
-                        credit = premium - buybackCost;
-                    } else {
-                        // No buyback = expired or still open, use full premium
-                        credit = premium;
-                    }
-                }
-                
-                // Assign credit to expiration week
+                // Add this SELL's premium to its expiration week
+                const premium = trade.premium * trade.contracts * 100;
                 const targetWeek = getWeekStart(trade.expDate);
                 const weekKey = targetWeek.toISOString();
                 
@@ -5381,8 +5356,56 @@
                     };
                 }
                 
-                weeklyPremiums[weekKey].premium += credit;
+                weeklyPremiums[weekKey].premium += premium;
                 weeklyPremiums[weekKey].trades += 1;
+                
+                // If this SELL was rolled, add the roll credit to the NEW week
+                if (trade.isRolled && trade.dateClosed) {
+                    // Find the buyback
+                    const buyback = closedTrades.find(t =>
+                        t.isClosingTrade &&
+                        t.action === 'buy' &&
+                        t.tradeRef === trade.tradeRef &&
+                        t.symbol === trade.symbol &&
+                        t.strike === trade.strike
+                    );
+                    
+                    if (buyback) {
+                        const buybackCost = buyback.premium * buyback.contracts * 100;
+                        
+                        // Find the NEW sell after this roll
+                        const newSell = allSells.find(t =>
+                            t.tradeRef === trade.tradeRef &&
+                            t.symbol === trade.symbol &&
+                            t.id !== trade.id &&
+                            new Date(t.dateOpened).toDateString() === new Date(buyback.dateClosed).toDateString()
+                        );
+                        
+                        if (newSell) {
+                            // Mark this new sell as processed (so we don't count it again)
+                            processedSells.add(newSell.id);
+                            
+                            // Add the roll credit to the NEW week
+                            const newPremium = newSell.premium * newSell.contracts * 100;
+                            const rollCredit = newPremium - buybackCost;
+                            
+                            const newWeek = getWeekStart(newSell.expDate);
+                            const newWeekKey = newWeek.toISOString();
+                            
+                            if (!weeklyPremiums[newWeekKey]) {
+                                weeklyPremiums[newWeekKey] = {
+                                    premium: 0,
+                                    trades: 0,
+                                    weekStart: newWeek,
+                                    weekEnd: getWeekEnd(newWeek)
+                                };
+                            }
+                            
+                            weeklyPremiums[newWeekKey].premium += rollCredit;
+                            weeklyPremiums[newWeekKey].trades += 1;
+                        }
+                    }
+                }
             });
             
             // Convert to array and sort by week
