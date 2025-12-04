@@ -2650,7 +2650,7 @@
             }
         }
 
-        function calculatePL(trade) {
+        function calculatePL(trade, forDisplay = false) {
             // Handle special stock trades (assignment, called-away)
             if (trade.isAssignment) {
                 return 0; // Assignment itself has no P&L (tracked in put premium)
@@ -2662,9 +2662,8 @@
             
             const premiumCollected = trade.premium * trade.contracts * 100;
             
-            // For rolled positions (isRolled or isClosingTrade), each leg shows its own P&L
-            // Don't try to match/subtract buybacks - the group total will net them out
-            if (trade.isRolled || trade.isClosingTrade) {
+            // For DISPLAY purposes (showing in tables), each roll leg shows its own P&L
+            if (forDisplay && (trade.isRolled || trade.isClosingTrade)) {
                 if (trade.action === 'sell') {
                     return premiumCollected; // SELL = credit (positive)
                 } else {
@@ -2672,7 +2671,7 @@
                 }
             }
             
-            // For non-rolled trades, use the original logic
+            // For non-rolled trades OR when calculating totals, use the original logic
             let closingCost = (trade.closingPremium || trade.closePrice || 0) * trade.contracts * 100;
             
             // For closed SELL trades without a closePrice, try to find the matching BUY trade
@@ -3082,7 +3081,7 @@
                 const cashRequired = calculateCashRequired(trade);
                 const returnPercent = calculateReturnPercent(trade);
                 const otm = calculateOTM(trade);
-                const pl = calculatePL(trade);
+                const pl = calculatePL(trade, true);
 
                 return `
                     <tr>
@@ -3211,7 +3210,7 @@
                 const cashRequired = calculateCashRequired(trade);
                 const returnPercent = calculateReturnPercent(trade);
                 const otm = calculateOTM(trade);
-                const pl = calculatePL(trade);
+                const pl = calculatePL(trade, true);
                 const daysToExp = calculateDaysToExpiration(trade.expDate);
                 
                 // Color code days to expiration
@@ -3309,7 +3308,7 @@
                 const cashRequired = calculateCashRequired(trade);
                 const returnPercent = calculateReturnPercent(trade);
                 const otm = calculateOTM(trade);
-                const pl = calculatePL(trade);
+                const pl = calculatePL(trade, true);
                 const rollCredit = calculateRollCredit(trade);
                 
                 symbolCollateral += cashRequired;
@@ -3528,7 +3527,7 @@
             tbody.innerHTML = closedTrades.map((trade, index) => {
                 const cashRequired = calculateCashRequired(trade);
                 const returnPercent = calculateReturnPercent(trade);
-                const pl = calculatePL(trade);
+                const pl = calculatePL(trade, true);
 
                 return `
                     <tr>
@@ -3727,7 +3726,7 @@
             tbody.innerHTML = filteredTrades.map(trade => {
                 const cashRequired = calculateCashRequired(trade);
                 const returnPercent = calculateReturnPercent(trade);
-                const pl = calculatePL(trade);
+                const pl = calculatePL(trade, true);
                 const statusBadge = trade.isOpen ? 
                     '<span class="status-badge open">OPEN</span>' : 
                     '<span class="status-badge closed">CLOSED</span>';
@@ -3837,7 +3836,7 @@
                             </thead>
                             <tbody>
                                 ${symbolTradesInGroup.map(trade => {
-                                    const pl = calculatePL(trade);
+                                    const pl = calculatePL(trade, true);
                                     return `
                                         <tr>
                                             <td>
@@ -4057,7 +4056,7 @@
                     tradesInRef.forEach(trade => {
                         const cashRequired = calculateCashRequired(trade);
                         const returnPercent = calculateReturnPercent(trade);
-                        const pl = calculatePL(trade);
+                        const pl = calculatePL(trade, true);
                         const rollCredit = calculateRollCredit(trade);
                         const statusBadge = trade.isOpen ? 
                             '<span class="status-badge open">OPEN</span>' : 
@@ -4111,7 +4110,7 @@
                 tbody.innerHTML = filteredTrades.map((trade, index) => {
                 const cashRequired = calculateCashRequired(trade);
                 const returnPercent = calculateReturnPercent(trade);
-                const pl = calculatePL(trade);
+                const pl = calculatePL(trade, true);
                 const rollCredit = calculateRollCredit(trade);
                 const statusBadge = trade.isOpen ? 
                     '<span class="status-badge open">OPEN</span>' : 
@@ -4305,7 +4304,7 @@
                                     const cashReq = calculateCashRequired(trade);
                                     const returnPercent = calculateReturnPercent(trade);
                                     const otm = calculateOTM(trade);
-                                    const pl = calculatePL(trade);
+                                    const pl = calculatePL(trade, true);
                                     
                                     return `
                                         <tr>
@@ -5140,7 +5139,7 @@
                         if (trade.isAssignment) hasAssignment = true;
                         if (trade.isCalledAway) hasCalledAway = true;
                         
-                        const pl = calculatePL(trade);
+                        const pl = calculatePL(trade, true);
                         groupPL += pl;
                     });
                     
@@ -7308,7 +7307,7 @@
                 const cashRequired = calculateCashRequired(trade);
                 const returnPercent = calculateReturnPercent(trade);
                 const otm = calculateOTM(trade);
-                const pl = calculatePL(trade);
+                const pl = calculatePL(trade, true);
                 
                 return {
                     'Status': 'OPEN',
@@ -7349,7 +7348,7 @@
             const closedTradesData = closedTrades.filter(t => !t.isClosingTrade).map(trade => {
                 const cashRequired = calculateCashRequired(trade);
                 const returnPercent = calculateReturnPercent(trade);
-                const pl = calculatePL(trade);
+                const pl = calculatePL(trade, true);
                 const daysHeld = trade.dateClosed && trade.dateOpened ? 
                     Math.round((new Date(trade.dateClosed) - new Date(trade.dateOpened)) / (1000 * 60 * 60 * 24)) : 0;
                 
@@ -7399,7 +7398,7 @@
             .map(trade => {
                 const cashRequired = calculateCashRequired(trade);
                 const returnPercent = calculateReturnPercent(trade);
-                const pl = calculatePL(trade);
+                const pl = calculatePL(trade, true);
                 const daysHeld = trade.dateClosed && trade.dateOpened ? 
                     Math.round((new Date(trade.dateClosed) - new Date(trade.dateOpened)) / (1000 * 60 * 60 * 24)) : 
                     (trade.isOpen ? Math.round((new Date() - new Date(trade.dateOpened)) / (1000 * 60 * 60 * 24)) : 0);
