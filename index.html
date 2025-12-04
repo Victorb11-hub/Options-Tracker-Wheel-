@@ -2710,8 +2710,7 @@
                 return null;
             }
             
-            // Find the buyback trade that came BEFORE this SELL
-            // We need to check: is this the ORIGINAL sell (that got rolled), or the NEW sell (after the roll)?
+            // Find all buybacks for this tradeRef
             const buybackTrades = closedTrades
                 .filter(t => 
                     t.tradeRef === trade.tradeRef && 
@@ -2724,39 +2723,27 @@
                 return null;
             }
             
-            // Check if there's a buyback that happened AFTER this SELL was opened
-            // If yes, this is the ORIGINAL sell that got rolled (no credit)
-            // If no, this is the NEW sell after a roll (show credit)
-            const buybackAfterThisSell = buybackTrades.find(buy => {
-                const buyDate = new Date(buy.dateClosed || buy.dateOpened);
-                const sellDate = new Date(trade.dateOpened);
-                return buyDate >= sellDate;
+            // Find the buyback that happened on or just after this SELL's opening date
+            // If this SELL's dateOpened is the same as a buyback's dateClosed, this is the NEW sell (show credit)
+            // If this SELL's dateOpened is earlier than all buybacks, this is the ORIGINAL (no credit)
+            
+            const buybackOnSameDate = buybackTrades.find(buy => {
+                const buyDate = new Date(buy.dateClosed || buy.dateOpened).toDateString();
+                const sellDate = new Date(trade.dateOpened).toDateString();
+                return buyDate === sellDate;
             });
             
-            if (buybackAfterThisSell) {
-                // This SELL was bought back (rolled away), so it shows no credit
-                return null;
+            if (buybackOnSameDate) {
+                // This SELL opened on the same day as a buyback = it's the NEW sell after a roll
+                // Calculate credit: this sell premium - buyback cost
+                const newPremium = trade.premium * trade.contracts * 100;
+                const buybackCost = buybackOnSameDate.premium * buybackOnSameDate.contracts * 100;
+                const credit = newPremium - buybackCost;
+                return credit;
             }
             
-            // This is a NEW sell after a roll - find the most recent buyback BEFORE this sell
-            const buybackBeforeThisSell = buybackTrades
-                .filter(buy => {
-                    const buyDate = new Date(buy.dateClosed || buy.dateOpened);
-                    const sellDate = new Date(trade.dateOpened);
-                    return buyDate <= sellDate;
-                })
-                .sort((a, b) => new Date(b.dateClosed || b.dateOpened) - new Date(a.dateClosed || a.dateOpened))[0];
-            
-            if (!buybackBeforeThisSell) {
-                return null;
-            }
-            
-            // Calculate: New Premium (current SELL trade) - Buyback Cost (previous BUY trade)
-            const newPremium = trade.premium * trade.contracts * 100;
-            const buybackCost = buybackBeforeThisSell.premium * buybackBeforeThisSell.contracts * 100;
-            const credit = newPremium - buybackCost;
-            
-            return credit;
+            // This SELL opened before any buybacks = it's the ORIGINAL sell (no credit)
+            return null;
         }
 
         function renderTables() {
