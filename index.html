@@ -4557,6 +4557,44 @@
             return duplicatesRemoved;
         }
 
+        // Helper function to sync a trade's updates across all arrays
+        function syncTradeAcrossAllArrays(tradeId, updates) {
+            let synced = false;
+            
+            // Update in trades array
+            const openTrade = trades.find(t => t.id === tradeId);
+            if (openTrade) {
+                Object.assign(openTrade, updates);
+                synced = true;
+            }
+            
+            // Update in closedTrades array
+            const closedTrade = closedTrades.find(t => t.id === tradeId);
+            if (closedTrade) {
+                Object.assign(closedTrade, updates);
+                synced = true;
+            }
+            
+            // Update in all tradeGroups
+            tradeGroups.forEach(group => {
+                const tradeInGroup = group.trades.find(t => t.id === tradeId);
+                if (tradeInGroup) {
+                    Object.assign(tradeInGroup, updates);
+                    synced = true;
+                }
+            });
+            
+            // Update in stockPositions if referenced
+            stockPositions.forEach(stock => {
+                if (stock.originalPut && stock.originalPut.id === tradeId) {
+                    Object.assign(stock.originalPut, updates);
+                    synced = true;
+                }
+            });
+            
+            return synced;
+        }
+
         function showWinRateInfo() {
             document.getElementById('winRateInfoModal').classList.add('active');
         }
@@ -5177,28 +5215,22 @@
                 // Update groupId
                 updatedTrade.groupId = `${updatedTrade.symbol}-${updatedTrade.strike}-${updatedTrade.type}-${updatedTrade.expDate}`;
                 
-                // Update the correct array
+                // Get the trade ID to sync across all arrays
+                let tradeId;
                 if (editingFromArray === 'open') {
-                    Object.assign(trades[editingIndex], updatedTrade);
+                    tradeId = trades[editingIndex].id;
                 } else if (editingFromArray === 'closed') {
-                    Object.assign(closedTrades[editingIndex], updatedTrade);
+                    tradeId = closedTrades[editingIndex].id;
                 }
                 
-                // If editing from a group, also update the trade in the group
-                if (editingFromGroup >= 0) {
-                    const group = tradeGroups[editingFromGroup];
-                    // Find the trade in the group by matching original values
-                    const tradeInGroup = group.trades.find(t => 
-                        t.dateOpened === updatedTrade.dateOpened && 
-                        t.strike === updatedTrade.strike
-                    );
-                    if (tradeInGroup) {
-                        Object.assign(tradeInGroup, updatedTrade);
-                    }
+                // Sync changes across ALL arrays using the helper function
+                if (tradeId) {
+                    syncTradeAcrossAllArrays(tradeId, updatedTrade);
                 }
                 
-                saveData();
+                saveUserData();
                 renderOpenTrades();
+                renderStockPositions();
                 if (currentTab === 'all') {
                     renderAllTrades();
                 } else if (currentTab === 'groups') {
