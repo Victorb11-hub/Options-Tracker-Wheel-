@@ -2661,6 +2661,18 @@
             }
             
             const premiumCollected = trade.premium * trade.contracts * 100;
+            
+            // For rolled positions (isRolled or isClosingTrade), each leg shows its own P&L
+            // Don't try to match/subtract buybacks - the group total will net them out
+            if (trade.isRolled || trade.isClosingTrade) {
+                if (trade.action === 'sell') {
+                    return premiumCollected; // SELL = credit (positive)
+                } else {
+                    return -premiumCollected; // BUY = debit (negative)
+                }
+            }
+            
+            // For non-rolled trades, use the original logic
             let closingCost = (trade.closingPremium || trade.closePrice || 0) * trade.contracts * 100;
             
             // For closed SELL trades without a closePrice, try to find the matching BUY trade
@@ -2671,7 +2683,7 @@
                     t.action === 'buy' &&
                     t.tradeRef === trade.tradeRef &&
                     t.symbol === trade.symbol &&
-                    Math.abs(new Date(t.dateOpened) - new Date(trade.dateClosed || trade.dateOpened)) < 86400000 // Within 1 day
+                    Math.abs(new Date(t.dateOpened || t.dateClosed) - new Date(trade.dateClosed || trade.dateOpened)) < 86400000 // Within 1 day
                 );
                 
                 if (buybackTrade) {
@@ -2686,7 +2698,6 @@
                 }
                 
                 // For open positions, just show premium collected
-                // (We don't know current market value, so can't calculate unrealized P&L)
                 return premiumCollected;
             } else {
                 // For BUY positions, premium paid is a cost
@@ -5736,12 +5747,12 @@
                     premium: rollClosingPremium,
                     action: originalTrade.action === 'sell' ? 'buy' : 'sell',
                     type: originalTrade.type,
-                    dateOpened: rollCloseDate,
-                    expDate: originalTrade.expDate,
+                    dateOpened: null, // BUY legs don't have open date
+                    expDate: null, // BUY legs don't have exp date
                     priceAtAction: rollPriceAtAction,
                     info: rollNotes ? `Roll close: ${rollNotes}` : 'Rolled - closing leg',
                     status: 'closed',
-                    dateClosed: rollCloseDate,
+                    dateClosed: rollCloseDate, // Only closed date matters for buybacks
                     isClosingTrade: true,
                     isRolled: true // Mark as part of roll chain
                 };
