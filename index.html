@@ -5310,133 +5310,159 @@
             
             const weeklyPremiums = {}; // Key: week start date string, Value: {premium, trades, weekStart, weekEnd}
             
-            // Group ALL closed trades by week, separating rolled vs non-rolled
-            const weeklyRolledTrades = {}; // Trades marked as rolled
-            const weeklyRegularTrades = {}; // Non-rolled trades
+            // Build a map of roll pairs: BUY leg -> corresponding new SELL leg
+            const rollPairs = {}; // Key: buyback trade ID, Value: new SELL trade
             
+            // First pass: identify roll pairs by matching tradeRef and dates
+            closedTrades.forEach(buyTrade => {
+                if (!buyTrade.isClosingTrade || buyTrade.action !== 'buy') return;
+                
+                // Find the new SELL that opened on the same date as this buyback
+                const newSell = closedTrades.find(t => 
+                    t.isRolled && 
+                    t.action === 'sell' &&
+                    t.tradeRef === buyTrade.tradeRef &&
+                    t.symbol === buyTrade.symbol &&
+                    t.dateOpened === buyTrade.dateClosed &&
+                    t.strike !== buyTrade.strike // Different strike = it's the new leg
+                );
+                
+                if (newSell) {
+                    rollPairs[buyTrade.id] = newSell;
+                }
+            });
+            
+            // Also check for rolls where current open position is the new leg
+            closedTrades.forEach(buyTrade => {
+                if (!buyTrade.isClosingTrade || buyTrade.action !== 'buy') return;
+                if (rollPairs[buyTrade.id]) return; // Already paired
+                
+                // Find the new OPEN SELL
+                const newSell = trades.find(t => 
+                    t.isRolled && 
+                    t.action === 'sell' &&
+                    t.tradeRef === buyTrade.tradeRef &&
+                    t.symbol === buyTrade.symbol &&
+                    t.dateOpened === buyTrade.dateClosed
+                );
+                
+                if (newSell) {
+                    rollPairs[buyTrade.id] = newSell;
+                }
+            });
+            
+            // Track which trades we've already processed
+            const processedTrades = new Set();
+            
+            // Process closed trades
             closedTrades.forEach(trade => {
                 // Filter by account
                 if (accountFilter !== 'all' && trade.account !== accountFilter) return;
                 
-                // Determine which week this trade belongs to
-                let tradeDate;
-                if (trade.isClosingTrade) {
-                    // BUY legs use dateClosed
-                    tradeDate = trade.dateClosed;
-                } else if (trade.dateClosed) {
-                    // Regular closed trades or SELL legs of rolls use dateClosed
-                    tradeDate = trade.dateClosed;
-                } else if (trade.expDate) {
-                    // Expired trades use expDate
-                    tradeDate = trade.expDate;
-                } else {
-                    return; // Skip if no date
-                }
+                // Skip if already processed
+                if (processedTrades.has(trade.id)) return;
                 
-                if (!tradeDate) return;
+                // Skip trades without required data
+                if (!trade.premium || !trade.contracts) return;
                 
-                const targetWeek = getWeekStart(tradeDate);
-                const weekKey = targetWeek.toISOString();
-                
-                // Separate rolled vs regular trades
-                if (trade.isRolled || trade.isClosingTrade) {
-                    // This is part of a roll
-                    if (!weeklyRolledTrades[weekKey]) {
-                        weeklyRolledTrades[weekKey] = {
-                            sells: [],
-                            buys: [],
+                // Handle BUY legs that are part of a roll pair
+                if (trade.isClosingTrade && trade.action === 'buy' && rollPairs[trade.id]) {
+                    const newSell = rollPairs[trade.id];
+                    
+                    // Calculate net credit from the roll
+                    const buybackCost = trade.premium * trade.contracts * 100;
+                    const newPremium = newSell.premium * newSell.contracts * 100;
+                    const netCredit = newPremium - buybackCost;
+                    
+                    // Assign net credit to the NEW expiration week
+                    const targetWeek = getWeekStart(newSell.expDate);
+                    const weekKey = targetWeek.toISOString();
+                    
+                    if (!weeklyPremiums[weekKey]) {
+                        weeklyPremiums[weekKey] = {
+                            premium: 0,
+                            trades: 0,
                             weekStart: targetWeek,
                             weekEnd: getWeekEnd(targetWeek)
                         };
                     }
                     
+                    weeklyPremiums[weekKey].premium += netCredit;
+                    weeklyPremiums[weekKey].trades += 1;
+                    
+                    // Mark both as processed
+                    processedTrades.add(trade.id);
+                    processedTrades.add(newSell.id);
+                    
+                    return;
+                }
+                
+                // Handle original SELL legs that were rolled (and paired with a BUY)
+                // Check if this SELL has a corresponding BUY that's been processed
+                const hasPairedBuy = closedTrades.some(buyTrade => 
+                    rollPairs[buyTrade.id]?.id === trade.id && processedTrades.has(buyTrade.id)
+                );
+                
+                if (trade.isRolled && trade.action === 'sell' && hasPairedBuy) {
+                    // This SELL was already processed as part of a roll pair, skip it
+                    return;
+                }
+                
+                // Handle standalone closed trades (not rolled, or first leg of a roll chain)
+                if (!trade.isClosingTrade) {
+                    let targetWeek;
+                    
+                    if (trade.expDate) {
+                        targetWeek = getWeekStart(trade.expDate);
+                    } else {
+                        return;
+                    }
+                    
+                    const weekKey = targetWeek.toISOString();
+                    
+                    if (!weeklyPremiums[weekKey]) {
+                        weeklyPremiums[weekKey] = {
+                            premium: 0,
+                            trades: 0,
+                            weekStart: targetWeek,
+                            weekEnd: getWeekEnd(targetWeek)
+                        };
+                    }
+                    
+                    // For SELL trades, add premium
                     if (trade.action === 'sell') {
-                        weeklyRolledTrades[weekKey].sells.push(trade);
-                    } else if (trade.action === 'buy') {
-                        weeklyRolledTrades[weekKey].buys.push(trade);
+                        const premiumAmount = trade.premium * trade.contracts * 100;
+                        
+                        // If this trade was rolled (first leg), don't count it
+                        // Check if there's a BUY that closed this position
+                        const wasBoughtBack = closedTrades.some(buyTrade =>
+                            buyTrade.isClosingTrade &&
+                            buyTrade.action === 'buy' &&
+                            buyTrade.tradeRef === trade.tradeRef &&
+                            buyTrade.symbol === trade.symbol &&
+                            Math.abs(new Date(buyTrade.dateClosed) - new Date(trade.dateClosed)) < 86400000
+                        );
+                        
+                        if (!wasBoughtBack) {
+                            // Not rolled, count the premium
+                            weeklyPremiums[weekKey].premium += premiumAmount;
+                            weeklyPremiums[weekKey].trades += 1;
+                        }
                     }
-                } else {
-                    // Regular non-rolled trade
-                    if (!weeklyRegularTrades[weekKey]) {
-                        weeklyRegularTrades[weekKey] = [];
-                    }
-                    weeklyRegularTrades[weekKey].push(trade);
                 }
             });
             
-            // Process regular (non-rolled) trades
-            Object.entries(weeklyRegularTrades).forEach(([weekKey, trades]) => {
-                let weekPremium = 0;
-                
-                trades.forEach(trade => {
-                    const premium = trade.premium * trade.contracts * 100;
-                    const closingCost = (trade.closePrice || trade.closingPremium || 0) * trade.contracts * 100;
-                    weekPremium += (premium - closingCost);
-                });
-                
-                if (!weeklyPremiums[weekKey]) {
-                    const weekStart = new Date(weekKey);
-                    weeklyPremiums[weekKey] = {
-                        premium: 0,
-                        trades: 0,
-                        weekStart: weekStart,
-                        weekEnd: getWeekEnd(weekStart)
-                    };
-                }
-                
-                weeklyPremiums[weekKey].premium += weekPremium;
-                weeklyPremiums[weekKey].trades += trades.length;
-            });
-            
-            // Process rolled trades - net out SELL and BUY in each week
-            Object.entries(weeklyRolledTrades).forEach(([weekKey, weekData]) => {
-                let weekNetCredit = 0;
-                
-                // Add all SELL premiums (credits) - these are new positions opened
-                weekData.sells.forEach(sellTrade => {
-                    const sellPremium = sellTrade.premium * sellTrade.contracts * 100;
-                    weekNetCredit += sellPremium;
-                    console.log(`Week ${weekKey}: SELL ${sellTrade.symbol} $${sellTrade.strike} premium +$${sellPremium.toFixed(2)}`);
-                });
-                
-                // Subtract all BUY premiums (debits) - these are buybacks
-                weekData.buys.forEach(buyTrade => {
-                    const buyPremium = buyTrade.premium * buyTrade.contracts * 100;
-                    weekNetCredit -= buyPremium;
-                    console.log(`Week ${weekKey}: BUY ${buyTrade.symbol} $${buyTrade.strike} premium -$${buyPremium.toFixed(2)}`);
-                });
-                
-                console.log(`Week ${weekKey}: Net credit from rolls: $${weekNetCredit.toFixed(2)}`);
-                
-                // Add to weekly premiums
-                if (!weeklyPremiums[weekKey]) {
-                    weeklyPremiums[weekKey] = {
-                        premium: 0,
-                        trades: 0,
-                        weekStart: weekData.weekStart,
-                        weekEnd: weekData.weekEnd
-                    };
-                }
-                
-                weeklyPremiums[weekKey].premium += weekNetCredit;
-                weeklyPremiums[weekKey].trades += Math.max(weekData.sells.length, weekData.buys.length);
-            });
-            
-            // Process open trades (filter by account)
+            // Process open trades (assign to their future expiration week)
             trades.forEach(trade => {
                 if (!trade.expDate) return;
                 
                 // Filter by account
                 if (accountFilter !== 'all' && trade.account !== accountFilter) return;
                 
-                // Skip open trades that are part of a roll - they're already counted in the rolled trades section
-                if (trade.isRolled) {
-                    return;
-                }
+                // Skip if already processed (as part of a roll pair)
+                if (processedTrades.has(trade.id)) return;
                 
-                // For open NON-ROLLED trades, just use the premium collected
-                const premiumToAdd = trade.premium * trade.contracts * 100;
-                
+                // Open trades go to their expiration week
                 const targetWeek = getWeekStart(trade.expDate);
                 const weekKey = targetWeek.toISOString();
                 
@@ -5449,6 +5475,8 @@
                     };
                 }
                 
+                // For open trades, just add the premium collected
+                const premiumToAdd = trade.premium * trade.contracts * 100;
                 weeklyPremiums[weekKey].premium += premiumToAdd;
                 weeklyPremiums[weekKey].trades += 1;
             });
@@ -5813,8 +5841,8 @@
                     premium: rollClosingPremium,
                     action: originalTrade.action === 'sell' ? 'buy' : 'sell',
                     type: originalTrade.type,
-                    dateOpened: null, // BUY legs don't have open date
-                    expDate: null, // BUY legs don't have exp date
+                    dateOpened: null, // BUY legs don't have open date for display
+                    expDate: originalTrade.expDate, // Keep original expDate for weekly premium assignment!
                     priceAtAction: rollPriceAtAction,
                     info: rollNotes ? `Roll close: ${rollNotes}` : 'Rolled - closing leg',
                     status: 'closed',
