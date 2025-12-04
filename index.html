@@ -965,7 +965,16 @@
         <!-- Controls removed - now in modal -->
 
         <div class="tab-content active" id="dashboardTab">
-            <h2 style="margin-bottom: 20px; font-size: 1.8rem;">Performance Metrics</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; font-size: 1.8rem;">Performance Metrics</h2>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label style="color: #888;">Account Filter:</label>
+                    <select id="dashboardAccountFilter" onchange="updateDashboardMetrics()" style="padding: 8px 12px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 4px; min-width: 150px;">
+                        <option value="all">All Accounts</option>
+                        <!-- Dynamically populated by JS -->
+                    </select>
+                </div>
+            </div>
             
             <div class="dashboard-metrics">
                 <!-- Win Rate Card -->
@@ -4673,8 +4682,55 @@
             return closedGroups.length;
         }
 
+        function populateDashboardAccountFilter() {
+            const filterSelect = document.getElementById('dashboardAccountFilter');
+            if (!filterSelect) return;
+            
+            // Get unique accounts from all trades
+            const allTrades = [...trades, ...closedTrades];
+            const accountsSet = new Set();
+            
+            allTrades.forEach(trade => {
+                if (trade.account && trade.account.trim() !== '') {
+                    accountsSet.add(trade.account.trim());
+                }
+            });
+            
+            // Sort accounts alphabetically
+            const accounts = Array.from(accountsSet).sort();
+            
+            // Save current selection
+            const currentValue = filterSelect.value;
+            
+            // Rebuild options
+            filterSelect.innerHTML = '<option value="all">All Accounts</option>';
+            accounts.forEach(account => {
+                const option = document.createElement('option');
+                option.value = account;
+                option.textContent = account;
+                filterSelect.appendChild(option);
+            });
+            
+            // Restore selection if it still exists
+            if (currentValue && Array.from(filterSelect.options).some(opt => opt.value === currentValue)) {
+                filterSelect.value = currentValue;
+            }
+        }
+
         function updateDashboardMetrics() {
             try {
+                // Populate account filter if not done yet
+                populateDashboardAccountFilter();
+                
+                // Get selected account filter
+                const accountFilter = document.getElementById('dashboardAccountFilter')?.value || 'all';
+                
+                // Filter trades by account
+                const filterByAccount = (trade) => {
+                    if (accountFilter === 'all') return true;
+                    return trade.account === accountFilter;
+                };
+                
                 // Calculate Win Rate based on CLOSED TRADE GROUPS
                 let winningTrades = 0;
                 let losingTrades = 0;
@@ -4686,7 +4742,14 @@
                 // Get all closed groups
                 const closedGroups = tradeGroups.filter(group => {
                     // A group is closed if it has no open trades
-                    return !group.trades.some(t => trades.some(openTrade => openTrade.id === t.id));
+                    const isClosed = !group.trades.some(t => trades.some(openTrade => openTrade.id === t.id));
+                    
+                    // Filter by account - check if any trade in group matches account
+                    if (accountFilter !== 'all' && isClosed) {
+                        return group.trades.some(t => t.account === accountFilter);
+                    }
+                    
+                    return isClosed;
                 });
 
                 closedGroups.forEach(group => {
@@ -4732,29 +4795,31 @@
                 document.getElementById('losingTrades').textContent = losingTrades;
                 document.getElementById('totalClosedTrades').textContent = totalClosedGroups;
 
-                // Calculate Average Days to Expiration
+                // Calculate Average Days to Expiration (filter by account)
                 let totalDTE = 0;
                 let minDTE = Infinity;
                 let maxDTE = -Infinity;
+                let filteredTradesCount = 0;
                 
-                trades.forEach(trade => {
+                trades.filter(filterByAccount).forEach(trade => {
                     const dte = calculateDaysToExpiration(trade.expDate);
                     totalDTE += dte;
                     if (dte < minDTE) minDTE = dte;
                     if (dte > maxDTE) maxDTE = dte;
+                    filteredTradesCount++;
                 });
 
-                const avgDTE = trades.length > 0 ? Math.round(totalDTE / trades.length) : 0;
+                const avgDTE = filteredTradesCount > 0 ? Math.round(totalDTE / filteredTradesCount) : 0;
                 
                 document.getElementById('avgDTE').textContent = avgDTE;
-                document.getElementById('minDTE').textContent = trades.length > 0 ? minDTE : 0;
-                document.getElementById('maxDTE').textContent = trades.length > 0 ? maxDTE : 0;
+                document.getElementById('minDTE').textContent = filteredTradesCount > 0 ? minDTE : 0;
+                document.getElementById('maxDTE').textContent = filteredTradesCount > 0 ? maxDTE : 0;
 
-                // Calculate Portfolio Allocation
+                // Calculate Portfolio Allocation (filter by account)
                 const allocationBySymbol = {};
                 let totalAllocation = 0;
 
-                trades.forEach(trade => {
+                trades.filter(filterByAccount).forEach(trade => {
                     const cashReq = calculateCashRequired(trade);
                     if (!allocationBySymbol[trade.symbol]) {
                         allocationBySymbol[trade.symbol] = 0;
@@ -4863,11 +4928,17 @@
         }
 
         function calculateWeeklyPremium() {
+            // Get selected account filter from dashboard
+            const accountFilter = document.getElementById('dashboardAccountFilter')?.value || 'all';
+            
             const weeklyPremiums = {}; // Key: week start date string, Value: {premium, trades, weekStart, weekEnd}
             
-            // Process closed trades
+            // Process closed trades (filter by account)
             closedTrades.forEach(trade => {
                 if (trade.isClosingTrade) return; // Skip closing leg entries
+                
+                // Filter by account
+                if (accountFilter !== 'all' && trade.account !== accountFilter) return;
                 
                 const premium = trade.premium * trade.contracts * 100;
                 const closingCost = (trade.closePrice || trade.closingPremium || 0) * trade.contracts * 100;
@@ -4899,9 +4970,12 @@
                 weeklyPremiums[weekKey].trades += 1;
             });
             
-            // Process open trades
+            // Process open trades (filter by account)
             trades.forEach(trade => {
                 if (!trade.expDate) return;
+                
+                // Filter by account
+                if (accountFilter !== 'all' && trade.account !== accountFilter) return;
                 
                 let premiumToAdd = 0;
                 
