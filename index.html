@@ -4034,7 +4034,9 @@
                     // Calculate total P&L for this ref group
                     let totalPL = 0;
                     tradesInRef.forEach(t => {
-                        totalPL += calculatePL(t);
+                        // For grouped display, sum the individual P&L values shown in the table
+                        // Use forDisplay=true to get each leg's premium
+                        totalPL += calculatePL(t, true);
                     });
                     
                     // Add group header
@@ -4779,7 +4781,8 @@
                     const cashReq = calculateCashRequired(trade);
                     totalCollateral += cashReq;
                     
-                    totalPL += calculatePL(trade);
+                    // Use forDisplay=true to get premium for each leg (including rolled trades)
+                    totalPL += calculatePL(trade, true);
                     totalReturns += parseFloat(calculateReturnPercent(trade));
                 });
 
@@ -4789,12 +4792,9 @@
                     return;
                 }
                 
-                // Skip closing trade entries (they're already accounted for in the opening trade's closePrice)
-                if (trade.isClosingTrade) {
-                    return;
-                }
-                
-                totalPL += calculatePL(trade);
+                // For rolled trades, include ALL legs (SELL and BUY)
+                // Use forDisplay=true to get each leg's premium
+                totalPL += calculatePL(trade, true);
             });
 
             const avgReturn = trades.length > 0 ? (totalReturns / trades.length).toFixed(2) : 0;
@@ -7540,8 +7540,9 @@
             }
             
             // === SUMMARY SHEET ===
-            const totalPL = trades.reduce((sum, t) => sum + calculatePL(t), 0) + 
-                           closedTrades.filter(t => !t.isClosingTrade).reduce((sum, t) => sum + calculatePL(t), 0);
+            // For Total P&L, sum all individual leg P&Ls (including rolled trades)
+            const totalPL = trades.reduce((sum, t) => sum + calculatePL(t, true), 0) + 
+                           closedTrades.filter(t => !t.isClosingTrade).reduce((sum, t) => sum + calculatePL(t, true), 0);
             const totalCollateral = trades.reduce((sum, t) => sum + calculateCashRequired(t), 0);
             const openCount = trades.length;
             
@@ -7561,7 +7562,8 @@
                 group.trades.forEach(trade => {
                     if (trade.isAssignment) hasAssignment = true;
                     if (trade.isCalledAway) hasCalledAway = true;
-                    groupPL += calculatePL(trade);
+                    // Use forDisplay=true to get each leg's premium for rolled trades
+                    groupPL += calculatePL(trade, true);
                 });
                 
                 if (hasAssignment || hasCalledAway) {
