@@ -860,6 +860,38 @@
         .hidden {
             display: none;
         }
+
+        /* Sortable Table Headers */
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 25px;
+        }
+
+        th.sortable:hover {
+            background: #2a2a2a;
+        }
+
+        th.sortable::after {
+            content: '⇅';
+            position: absolute;
+            right: 8px;
+            opacity: 0.3;
+            font-size: 0.8em;
+        }
+
+        th.sortable.sort-asc::after {
+            content: '▲';
+            opacity: 1;
+            color: #00ff88;
+        }
+
+        th.sortable.sort-desc::after {
+            content: '▼';
+            opacity: 1;
+            color: #00ff88;
+        }
     </style>
 </head>
 <body>
@@ -1097,22 +1129,22 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Symbol</th>
-                            <th>Contracts</th>
-                            <th>Strike</th>
-                            <th>Premium</th>
-                            <th>Action</th>
-                            <th>Type</th>
-                            <th>Date Opened <span style="cursor: pointer; user-select: none;" onclick="sortOpenTrades('dateOpened', 'asc')">▲</span><span style="cursor: pointer; user-select: none;" onclick="sortOpenTrades('dateOpened', 'desc')">▼</span></th>
-                            <th>Exp Date</th>
-                            <th>Cash Required</th>
-                            <th>% Return</th>
-                            <th>Price @ Action</th>
-                            <th>% OTM</th>
-                            <th>P&L</th>
-                            <th>Info</th>
-                            <th>Trade Ref #</th>
-                            <th>Account</th>
+                            <th class="sortable" onclick="sortTable('open', 'symbol', 'text')">Symbol</th>
+                            <th class="sortable" onclick="sortTable('open', 'contracts', 'number')">Contracts</th>
+                            <th class="sortable" onclick="sortTable('open', 'strike', 'number')">Strike</th>
+                            <th class="sortable" onclick="sortTable('open', 'premium', 'number')">Premium</th>
+                            <th class="sortable" onclick="sortTable('open', 'action', 'text')">Action</th>
+                            <th class="sortable" onclick="sortTable('open', 'type', 'text')">Type</th>
+                            <th class="sortable" onclick="sortTable('open', 'dateOpened', 'date')">Date Opened</th>
+                            <th class="sortable" onclick="sortTable('open', 'expDate', 'date')">Exp Date</th>
+                            <th class="sortable" onclick="sortTable('open', 'cashRequired', 'number')">Cash Required</th>
+                            <th class="sortable" onclick="sortTable('open', 'percentReturn', 'number')">% Return</th>
+                            <th class="sortable" onclick="sortTable('open', 'priceAtAction', 'number')">Price @ Action</th>
+                            <th class="sortable" onclick="sortTable('open', 'percentOTM', 'number')">% OTM</th>
+                            <th class="sortable" onclick="sortTable('open', 'pl', 'number')">P&L</th>
+                            <th class="sortable" onclick="sortTable('open', 'info', 'text')">Info</th>
+                            <th class="sortable" onclick="sortTable('open', 'tradeRef', 'text')">Trade Ref #</th>
+                            <th class="sortable" onclick="sortTable('open', 'account', 'text')">Account</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -1138,23 +1170,23 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Symbol</th>
-                            <th>Contracts</th>
-                            <th>Strike</th>
-                            <th>Premium</th>
-                            <th>Action</th>
-                            <th>Type</th>
-                            <th>Date Opened <span style="cursor: pointer; user-select: none;" onclick="sortFilteredTrades('dateOpened', 'asc')">▲</span><span style="cursor: pointer; user-select: none;" onclick="sortFilteredTrades('dateOpened', 'desc')">▼</span></th>
-                            <th>Exp Date</th>
-                            <th>Cash Required</th>
-                            <th>% Return</th>
-                            <th>Price @ Action</th>
-                            <th>% OTM</th>
-                            <th>P&L</th>
-                            <th>Credit <span style="display: inline-block; width: 14px; height: 14px; background: #333; color: #fff; border-radius: 50%; text-align: center; line-height: 14px; font-size: 0.7rem; cursor: help; font-weight: bold;" title="Net credit from most recent roll (New Premium - Buyback Cost)">ⓘ</span></th>
-                            <th>Info</th>
-                            <th>Trade Ref #</th>
-                            <th>Account</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'symbol', 'text')">Symbol</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'contracts', 'number')">Contracts</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'strike', 'number')">Strike</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'premium', 'number')">Premium</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'action', 'text')">Action</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'type', 'text')">Type</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'dateOpened', 'date')">Date Opened</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'expDate', 'date')">Exp Date</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'cashRequired', 'number')">Cash Required</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'percentReturn', 'number')">% Return</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'priceAtAction', 'number')">Price @ Action</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'percentOTM', 'number')">% OTM</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'pl', 'number')">P&L</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'credit', 'number')">Credit <span style="display: inline-block; width: 14px; height: 14px; background: #333; color: #fff; border-radius: 50%; text-align: center; line-height: 14px; font-size: 0.7rem; cursor: help; font-weight: bold;" title="Net credit from most recent roll (New Premium - Buyback Cost)">ⓘ</span></th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'info', 'text')">Info</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'tradeRef', 'text')">Trade Ref #</th>
+                            <th class="sortable" onclick="sortTable('openByStock', 'account', 'text')">Account</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -1240,23 +1272,23 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Status</th>
-                            <th>Symbol</th>
-                            <th>Contracts</th>
-                            <th>Strike</th>
-                            <th>Premium</th>
-                            <th>Action</th>
-                            <th>Type</th>
-                            <th>Date Opened <span style="cursor: pointer; user-select: none;" onclick="sortAllTrades('dateOpened', 'asc')">▲</span><span style="cursor: pointer; user-select: none;" onclick="sortAllTrades('dateOpened', 'desc')">▼</span></th>
-                            <th>Date Closed <span style="cursor: pointer; user-select: none;" onclick="sortAllTrades('dateClosed', 'asc')">▲</span><span style="cursor: pointer; user-select: none;" onclick="sortAllTrades('dateClosed', 'desc')">▼</span></th>
-                            <th>Exp Date</th>
-                            <th>Cash Required</th>
-                            <th>% Return</th>
-                            <th>P&L</th>
-                            <th>Credit <span style="display: inline-block; width: 14px; height: 14px; background: #333; color: #fff; border-radius: 50%; text-align: center; line-height: 14px; font-size: 0.7rem; cursor: help; font-weight: bold;" title="Net credit from most recent roll (New Premium - Buyback Cost)">ⓘ</span></th>
-                            <th>Info</th>
-                            <th>Trade Ref #</th>
-                            <th>Account</th>
+                            <th class="sortable" onclick="sortTable('all', 'status', 'text')">Status</th>
+                            <th class="sortable" onclick="sortTable('all', 'symbol', 'text')">Symbol</th>
+                            <th class="sortable" onclick="sortTable('all', 'contracts', 'number')">Contracts</th>
+                            <th class="sortable" onclick="sortTable('all', 'strike', 'number')">Strike</th>
+                            <th class="sortable" onclick="sortTable('all', 'premium', 'number')">Premium</th>
+                            <th class="sortable" onclick="sortTable('all', 'action', 'text')">Action</th>
+                            <th class="sortable" onclick="sortTable('all', 'type', 'text')">Type</th>
+                            <th class="sortable" onclick="sortTable('all', 'dateOpened', 'date')">Date Opened</th>
+                            <th class="sortable" onclick="sortTable('all', 'dateClosed', 'date')">Date Closed</th>
+                            <th class="sortable" onclick="sortTable('all', 'expDate', 'date')">Exp Date</th>
+                            <th class="sortable" onclick="sortTable('all', 'cashRequired', 'number')">Cash Required</th>
+                            <th class="sortable" onclick="sortTable('all', 'percentReturn', 'number')">% Return</th>
+                            <th class="sortable" onclick="sortTable('all', 'pl', 'number')">P&L</th>
+                            <th class="sortable" onclick="sortTable('all', 'credit', 'number')">Credit <span style="display: inline-block; width: 14px; height: 14px; background: #333; color: #fff; border-radius: 50%; text-align: center; line-height: 14px; font-size: 0.7rem; cursor: help; font-weight: bold;" title="Net credit from most recent roll (New Premium - Buyback Cost)">ⓘ</span></th>
+                            <th class="sortable" onclick="sortTable('all', 'info', 'text')">Info</th>
+                            <th class="sortable" onclick="sortTable('all', 'tradeRef', 'text')">Trade Ref #</th>
+                            <th class="sortable" onclick="sortTable('all', 'account', 'text')">Account</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -1279,15 +1311,15 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Symbol</th>
-                            <th>Shares</th>
-                            <th>Cost Basis</th>
-                            <th>Assigned Price</th>
-                            <th>Total Value</th>
-                            <th>Assigned Date</th>
+                            <th class="sortable" onclick="sortTable('stock', 'symbol', 'text')">Symbol</th>
+                            <th class="sortable" onclick="sortTable('stock', 'shares', 'number')">Shares</th>
+                            <th class="sortable" onclick="sortTable('stock', 'costBasis', 'number')">Cost Basis</th>
+                            <th class="sortable" onclick="sortTable('stock', 'assignedPrice', 'number')">Assigned Price</th>
+                            <th class="sortable" onclick="sortTable('stock', 'totalValue', 'number')">Total Value</th>
+                            <th class="sortable" onclick="sortTable('stock', 'assignedDate', 'date')">Assigned Date</th>
                             <th>Original Put</th>
                             <th>Covered Calls</th>
-                            <th>Account</th>
+                            <th class="sortable" onclick="sortTable('stock', 'account', 'text')">Account</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -1319,22 +1351,22 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Status</th>
-                            <th>Symbol</th>
-                            <th>Contracts</th>
-                            <th>Strike</th>
-                            <th>Premium</th>
-                            <th>Action</th>
-                            <th>Type</th>
-                            <th>Date Opened</th>
-                            <th>Date Closed</th>
-                            <th>Exp Date</th>
-                            <th>Cash Required</th>
-                            <th>Return %</th>
-                            <th>P&L</th>
-                            <th>Info</th>
-                            <th>Trade Ref #</th>
-                            <th>Account</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'status', 'text')">Status</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'symbol', 'text')">Symbol</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'contracts', 'number')">Contracts</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'strike', 'number')">Strike</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'premium', 'number')">Premium</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'action', 'text')">Action</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'type', 'text')">Type</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'dateOpened', 'date')">Date Opened</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'dateClosed', 'date')">Date Closed</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'expDate', 'date')">Exp Date</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'cashRequired', 'number')">Cash Required</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'percentReturn', 'number')">Return %</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'pl', 'number')">P&L</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'info', 'text')">Info</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'tradeRef', 'text')">Trade Ref #</th>
+                            <th class="sortable" onclick="sortTable('symbolDetail', 'account', 'text')">Account</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -1401,6 +1433,34 @@
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button style="background: #ff8844; color: #000;" onclick="confirmAssign()">Assign Stock</button>
                 <button class="secondary" onclick="closeAssignModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Called Out Modal -->
+    <div class="modal" id="calledOutModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Stock Called Away</div>
+                <button class="close-btn" onclick="closeCalledOutModal()">×</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Called Away Date</label>
+                    <input type="date" id="calledOutDate">
+                </div>
+                <div class="form-group">
+                    <label>Call Away Price (per share)</label>
+                    <input type="number" id="calledOutPrice" placeholder="Strike price" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <input type="text" id="calledOutNotes" placeholder="Stock called away">
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button style="background: #ff4488; color: #fff;" onclick="confirmCalledOut()">Confirm Called Out</button>
+                <button class="secondary" onclick="closeCalledOutModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -2141,11 +2201,35 @@
                 return;
             }
             
-            // Sort by date (most recent first) to get the last used ref
-            tradesWithRef.sort((a, b) => new Date(b.dateOpened) - new Date(a.dateOpened));
-            const mostRecentRef = tradesWithRef[0].tradeRef;
+            // Extract numbers from each ref and find the highest
+            let highestNumber = -1;
+            let highestRef = '';
             
-            document.getElementById('lastRefValue').textContent = mostRecentRef;
+            tradesWithRef.forEach(trade => {
+                const ref = trade.tradeRef.trim();
+                
+                // Extract all numbers from the ref (e.g., "Main - 3" -> [3], "Roth - 2" -> [2])
+                const numbers = ref.match(/\d+/g);
+                
+                if (numbers && numbers.length > 0) {
+                    // Get the largest number found in this ref
+                    const maxNum = Math.max(...numbers.map(n => parseInt(n)));
+                    
+                    if (maxNum > highestNumber) {
+                        highestNumber = maxNum;
+                        highestRef = ref;
+                    }
+                }
+            });
+            
+            // If we found refs with numbers, show the one with highest number
+            if (highestNumber >= 0) {
+                document.getElementById('lastRefValue').textContent = highestRef;
+            } else {
+                // No numbers found in any refs, just show most recent by date
+                tradesWithRef.sort((a, b) => new Date(b.dateOpened) - new Date(a.dateOpened));
+                document.getElementById('lastRefValue').textContent = tradesWithRef[0].tradeRef;
+            }
         }
 
         function saveUserData() {
@@ -2666,6 +2750,275 @@
             renderOpenTrades();
         }
 
+        // Universal Table Sorting System
+        const tableSortState = {
+            open: { column: null, direction: null },
+            openByStock: { column: null, direction: null },
+            all: { column: null, direction: null },
+            stock: { column: null, direction: null },
+            groups: { column: null, direction: null },
+            symbolDetail: { column: null, direction: null }
+        };
+
+        function sortTable(table, column, type) {
+            const state = tableSortState[table];
+            
+            // Toggle direction
+            if (state.column === column) {
+                state.direction = state.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                state.column = column;
+                state.direction = 'asc';
+            }
+            
+            // Update header indicators
+            let tableElement;
+            if (table === 'symbolDetail') {
+                tableElement = document.querySelector('#symbolDetailTab table');
+            } else if (table === 'all') {
+                tableElement = document.querySelector('#allTab table');
+            } else if (table === 'open') {
+                tableElement = document.querySelector('#openTab table');
+            } else if (table === 'openByStock') {
+                tableElement = document.querySelector('#filteredTradesTableBody')?.closest('table');
+            } else if (table === 'stock') {
+                tableElement = document.querySelector('#stockTab table');
+            }
+            
+            if (tableElement) {
+                // Remove all sort classes
+                tableElement.querySelectorAll('th.sortable').forEach(th => {
+                    th.classList.remove('sort-asc', 'sort-desc');
+                });
+                
+                // Add sort class to active column
+                const headers = Array.from(tableElement.querySelectorAll('th.sortable'));
+                const activeHeader = headers.find(th => {
+                    const onclick = th.getAttribute('onclick');
+                    return onclick && onclick.includes(`'${column}'`);
+                });
+                if (activeHeader) {
+                    activeHeader.classList.add(`sort-${state.direction}`);
+                }
+            }
+            
+            // Sort and re-render
+            if (table === 'open') {
+                sortAndRenderOpen(column, type, state.direction);
+            } else if (table === 'openByStock') {
+                sortAndRenderOpenByStock(column, type, state.direction);
+            } else if (table === 'all') {
+                sortAndRenderAll(column, type, state.direction);
+            } else if (table === 'stock') {
+                sortAndRenderStock(column, type, state.direction);
+            } else if (table === 'symbolDetail') {
+                sortAndRenderSymbolDetail(column, type, state.direction);
+            }
+        }
+
+        function compareValues(a, b, type, direction) {
+            let aVal = a;
+            let bVal = b;
+            
+            // Handle null/undefined
+            if (aVal == null) aVal = type === 'number' ? -Infinity : '';
+            if (bVal == null) bVal = type === 'number' ? -Infinity : '';
+            
+            let comparison = 0;
+            
+            if (type === 'number') {
+                comparison = parseFloat(aVal) - parseFloat(bVal);
+            } else if (type === 'date') {
+                comparison = new Date(aVal) - new Date(bVal);
+            } else { // text
+                comparison = String(aVal).localeCompare(String(bVal));
+            }
+            
+            return direction === 'asc' ? comparison : -comparison;
+        }
+
+        function sortAndRenderOpen(column, type, direction) {
+            // Sort trades array
+            trades.sort((a, b) => {
+                let aVal, bVal;
+                
+                // Special handling for calculated fields
+                if (column === 'cashRequired') {
+                    aVal = calculateCashRequired(a);
+                    bVal = calculateCashRequired(b);
+                } else if (column === 'percentReturn') {
+                    aVal = calculatePercentReturn(a);
+                    bVal = calculatePercentReturn(b);
+                } else if (column === 'percentOTM') {
+                    aVal = calculatePercentOTM(a);
+                    bVal = calculatePercentOTM(b);
+                } else if (column === 'pl') {
+                    aVal = calculatePL(a);
+                    bVal = calculatePL(b);
+                } else {
+                    aVal = a[column];
+                    bVal = b[column];
+                }
+                
+                return compareValues(aVal, bVal, type, direction);
+            });
+            
+            renderOpenTrades();
+        }
+
+        function sortAndRenderOpenByStock(column, type, direction) {
+            // Get current stock filter
+            const selectedStock = document.getElementById('stockFilter')?.value;
+            
+            if (!selectedStock) {
+                // No stock selected, can't sort
+                return;
+            }
+            
+            // Filter trades by selected stock
+            let filteredTrades = trades.filter(t => t.symbol === selectedStock);
+            
+            // Sort the filtered trades
+            filteredTrades.sort((a, b) => {
+                let aVal, bVal;
+                
+                if (column === 'cashRequired') {
+                    aVal = calculateCashRequired(a);
+                    bVal = calculateCashRequired(b);
+                } else if (column === 'percentReturn') {
+                    aVal = calculatePercentReturn(a);
+                    bVal = calculatePercentReturn(b);
+                } else if (column === 'percentOTM') {
+                    aVal = calculatePercentOTM(a);
+                    bVal = calculatePercentOTM(b);
+                } else if (column === 'pl') {
+                    aVal = calculatePL(a);
+                    bVal = calculatePL(b);
+                } else if (column === 'credit') {
+                    aVal = a.isRolled ? (calculateRollCredit(a) || 0) : 0;
+                    bVal = b.isRolled ? (calculateRollCredit(b) || 0) : 0;
+                } else {
+                    aVal = a[column];
+                    bVal = b[column];
+                }
+                
+                return compareValues(aVal, bVal, type, direction);
+            });
+            
+            // Store sorted trades
+            window.sortedOpenByStock = filteredTrades;
+            
+            // Re-render by calling filterByStock which will use the sorted array
+            filterByStock();
+        }
+
+        function sortAndRenderAll(column, type, direction) {
+            // Get current filter state
+            const currentFilter = window.allTradesFilter || 'all';
+            const symbolFilter = document.getElementById('allTradesSymbolFilter')?.value || '';
+            
+            // Build combined array for sorting
+            let allTrades = [];
+            
+            // Add open trades with isOpen flag
+            trades.forEach(t => {
+                allTrades.push({...t, isOpen: true, status: 'open'});
+            });
+            
+            // Add closed trades
+            closedTrades.filter(t => !t.isClosingTrade).forEach(t => {
+                allTrades.push({...t, isOpen: false, status: t.status || 'closed'});
+            });
+            
+            // Sort the combined array
+            allTrades.sort((a, b) => {
+                let aVal, bVal;
+                
+                // Special handling for calculated fields
+                if (column === 'cashRequired') {
+                    aVal = a.isOpen ? calculateCashRequired(a) : 0;
+                    bVal = b.isOpen ? calculateCashRequired(b) : 0;
+                } else if (column === 'percentReturn') {
+                    aVal = calculatePercentReturn(a);
+                    bVal = calculatePercentReturn(b);
+                } else if (column === 'pl') {
+                    aVal = calculatePL(a);
+                    bVal = calculatePL(b);
+                } else if (column === 'credit') {
+                    aVal = a.isOpen && a.isRolled ? (calculateRollCredit(a) || 0) : 0;
+                    bVal = b.isOpen && b.isRolled ? (calculateRollCredit(b) || 0) : 0;
+                } else {
+                    aVal = a[column];
+                    bVal = b[column];
+                }
+                
+                return compareValues(aVal, bVal, type, direction);
+            });
+            
+            // Store sorted order (we'll need to update renderAllTrades to use this)
+            window.sortedAllTrades = allTrades;
+            
+            renderAllTrades();
+        }
+
+        function sortAndRenderSymbolDetail(column, type, direction) {
+            // Get current symbol
+            const currentSymbol = window.currentDetailSymbol;
+            if (!currentSymbol) {
+                return;
+            }
+            
+            // Get current filter
+            const currentFilter = window.symbolTradesFilter || 'all';
+            
+            // Build array to sort
+            let symbolTrades = [];
+            
+            trades.filter(t => t.symbol === currentSymbol).forEach(t => {
+                symbolTrades.push({...t, isOpen: true, status: 'open'});
+            });
+            
+            closedTrades.filter(t => t.symbol === currentSymbol && !t.isClosingTrade).forEach(t => {
+                symbolTrades.push({...t, isOpen: false, status: t.status || 'closed'});
+            });
+            
+            // Sort
+            symbolTrades.sort((a, b) => {
+                let aVal, bVal;
+                
+                if (column === 'cashRequired') {
+                    aVal = a.isOpen ? calculateCashRequired(a) : 0;
+                    bVal = b.isOpen ? calculateCashRequired(b) : 0;
+                } else if (column === 'percentReturn') {
+                    aVal = calculatePercentReturn(a);
+                    bVal = calculatePercentReturn(b);
+                } else if (column === 'pl') {
+                    aVal = calculatePL(a);
+                    bVal = calculatePL(b);
+                } else {
+                    aVal = a[column];
+                    bVal = b[column];
+                }
+                
+                return compareValues(aVal, bVal, type, direction);
+            });
+            
+            // Store sorted order
+            window.sortedSymbolTrades = symbolTrades;
+            
+            // Re-render symbol detail
+            showSymbolDetail(currentSymbol);
+        }
+
+        function sortAndRenderStock(column, type, direction) {
+            // Sort stockPositions array
+            stockPositions.sort((a, b) => {
+                return compareValues(a[column], b[column], type, direction);
+            });
+            
+            renderStockPositions();
+        }
+
         function renderOpenTrades() {
             const tbody = document.getElementById('openTradesTableBody');
             if (!tbody) {
@@ -2745,6 +3098,9 @@
                                 <button class="btn-small success" onclick="openCloseModal(${actualIndex})">Close</button>
                                 ${trade.type === 'put' && trade.action === 'sell' ? `
                                     <button class="btn-small" style="background: #ff8844; color: #000;" onclick="assignStock(${actualIndex})">Assign</button>
+                                ` : ''}
+                                ${trade.type === 'call' && trade.action === 'sell' ? `
+                                    <button class="btn-small" style="background: #ff4488; color: #fff;" onclick="openCalledOutModal(${actualIndex})">Called Out</button>
                                 ` : ''}
                                 <button class="btn-small danger" onclick="deleteTrade(${actualIndex})">Delete</button>
                             </div>
@@ -2900,7 +3256,7 @@
             if (!selectedSymbol) {
                 filteredTbody.innerHTML = `
                     <tr>
-                        <td colspan="17" style="text-align: center; color: #666; padding: 40px;">
+                        <td colspan="18" style="text-align: center; color: #666; padding: 40px;">
                             Select a stock from the dropdown above to view positions.
                         </td>
                     </tr>
@@ -2908,30 +3264,29 @@
                 return;
             }
             
-            // Filter trades by selected symbol
-            const filteredTrades = trades.filter(t => t.symbol === selectedSymbol);
+            // Check if we have a sorted array to use
+            let filteredTrades;
+            if (window.sortedOpenByStock && window.sortedOpenByStock.length > 0 && 
+                window.sortedOpenByStock[0].symbol === selectedSymbol) {
+                // Use pre-sorted array
+                filteredTrades = window.sortedOpenByStock;
+            } else {
+                // Filter trades by selected symbol
+                filteredTrades = trades.filter(t => t.symbol === selectedSymbol);
+                // Clear sorted array since we're using a new filter
+                window.sortedOpenByStock = null;
+            }
             
             if (filteredTrades.length === 0) {
                 filteredTbody.innerHTML = `
                     <tr>
-                        <td colspan="17" style="text-align: center; color: #666; padding: 40px;">
+                        <td colspan="18" style="text-align: center; color: #666; padding: 40px;">
                             No positions found for ${selectedSymbol}.
                         </td>
                     </tr>
                 `;
                 return;
             }
-            
-            // Sort filtered trades
-            filteredTrades.sort((a, b) => {
-                const aDate = new Date(a[filteredTradesSortField]);
-                const bDate = new Date(b[filteredTradesSortField]);
-                if (filteredTradesSortOrder === 'asc') {
-                    return aDate - bDate;
-                } else {
-                    return bDate - aDate;
-                }
-            });
             
             // Calculate totals for this symbol
             let symbolCollateral = 0;
@@ -3506,55 +3861,58 @@
             const tbody = document.getElementById('allTradesTableBody');
             if (!tbody) return; // Exit if element doesn't exist yet
             
-            // Collect all trades from all sources
-            const openTrades = trades.map(t => ({...t, isOpen: true}));
-            const closedTradesArray = closedTrades.map(t => ({...t, isOpen: false}));
+            // Check if we have a sorted order to use
+            let allTrades;
+            if (window.sortedAllTrades && window.sortedAllTrades.length > 0) {
+                // Use pre-sorted array
+                allTrades = window.sortedAllTrades;
+            } else {
+                // Build array normally
+                const openTrades = trades.map(t => ({...t, isOpen: true}));
+                const closedTradesArray = closedTrades.map(t => ({...t, isOpen: false}));
+                
+                // Build a Set of IDs we've already included from open and closed
+                const includedIds = new Set();
+                openTrades.forEach(t => { if (t.id) includedIds.add(t.id); });
+                closedTradesArray.forEach(t => { if (t.id) includedIds.add(t.id); });
+                
+                // Only add trades from groups if they're NOT in open or closed arrays
+                const groupTrades = [];
+                tradeGroups.forEach(group => {
+                    if (group.trades && Array.isArray(group.trades)) {
+                        group.trades.forEach(trade => {
+                            // Skip if already included (by ID or by field matching)
+                            if (trade.id && includedIds.has(trade.id)) {
+                                return; // Already in open or closed
+                            }
+                            
+                            // Fallback: field matching for old trades without IDs
+                            const alreadyExists = openTrades.some(t => 
+                                t.symbol === trade.symbol && 
+                                t.dateOpened === trade.dateOpened && 
+                                t.strike === trade.strike &&
+                                t.premium === trade.premium &&
+                                t.action === trade.action
+                            ) || closedTradesArray.some(t => 
+                                t.symbol === trade.symbol && 
+                                t.dateOpened === trade.dateOpened && 
+                                t.strike === trade.strike &&
+                                t.premium === trade.premium &&
+                                t.action === trade.action
+                            );
+                            
+                            if (!alreadyExists) {
+                                if (trade.id) includedIds.add(trade.id);
+                                groupTrades.push({...trade, isOpen: trade.status === 'open'});
+                            }
+                        });
+                    }
+                });
+                
+                allTrades = [...openTrades, ...closedTradesArray, ...groupTrades];
+            }
             
-            // Build a Set of IDs we've already included from open and closed
-            const includedIds = new Set();
-            openTrades.forEach(t => { if (t.id) includedIds.add(t.id); });
-            closedTradesArray.forEach(t => { if (t.id) includedIds.add(t.id); });
-            
-            // Only add trades from groups if they're NOT in open or closed arrays
-            const groupTrades = [];
-            tradeGroups.forEach(group => {
-                if (group.trades && Array.isArray(group.trades)) {
-                    group.trades.forEach(trade => {
-                        // Skip if already included (by ID or by field matching)
-                        if (trade.id && includedIds.has(trade.id)) {
-                            return; // Already in open or closed
-                        }
-                        
-                        // Fallback: field matching for old trades without IDs
-                        const alreadyExists = openTrades.some(t => 
-                            t.symbol === trade.symbol && 
-                            t.dateOpened === trade.dateOpened && 
-                            t.strike === trade.strike &&
-                            t.premium === trade.premium &&
-                            t.action === trade.action
-                        ) || closedTradesArray.some(t => 
-                            t.symbol === trade.symbol && 
-                            t.dateOpened === trade.dateOpened && 
-                            t.strike === trade.strike &&
-                            t.premium === trade.premium &&
-                            t.action === trade.action
-                        );
-                        
-                        if (!alreadyExists) {
-                            if (trade.id) includedIds.add(trade.id);
-                            groupTrades.push({...trade, isOpen: trade.status === 'open'});
-                        }
-                    });
-                }
-            });
-            
-            const allTrades = [...openTrades, ...closedTradesArray, ...groupTrades];
-            
-            console.log('renderAllTrades - Open trades:', openTrades.length);
-            console.log('renderAllTrades - Closed trades:', closedTradesArray.length);
-            console.log('renderAllTrades - Group trades (unique):', groupTrades.length);
             console.log('renderAllTrades - Total allTrades:', allTrades.length);
-            console.log('All trades data:', allTrades);
             
             // Apply filter
             let filteredTrades = allTrades;
@@ -3719,6 +4077,9 @@
                                             <button class="btn-small" onclick="editTradeFromAll(${filteredTrades.indexOf(trade)})">Edit</button>
                                             <button class="btn-small" style="background: #4488ff; color: #fff;" onclick="rollTradeFromAll(${filteredTrades.indexOf(trade)})">Roll</button>
                                             <button class="btn-small success" onclick="closeTradeFromAll(${filteredTrades.indexOf(trade)})">Close</button>
+                                            ${trade.type === 'call' && trade.action === 'sell' ? `
+                                                <button class="btn-small" style="background: #ff4488; color: #fff;" onclick="calledOutFromAll(${filteredTrades.indexOf(trade)})">Called Out</button>
+                                            ` : ''}
                                         ` : `
                                             <button class="btn-small" onclick="editTradeFromAll(${filteredTrades.indexOf(trade)})">Edit</button>
                                         `}
@@ -3770,6 +4131,9 @@
                                 ${trade.isOpen ? `
                                     <button class="btn-small" style="background: #4488ff; color: #fff;" onclick="rollTradeFromAll(${index})">Roll</button>
                                     <button class="btn-small success" onclick="closeTradeFromAll(${index})">Close</button>
+                                    ${trade.type === 'call' && trade.action === 'sell' ? `
+                                        <button class="btn-small" style="background: #ff4488; color: #fff;" onclick="calledOutFromAll(${index})">Called Out</button>
+                                    ` : ''}
                                 ` : ''}
                                 <button class="btn-small danger" onclick="deleteTradeFromAll(${index}, ${trade.isOpen})">Delete</button>
                             </div>
@@ -4688,16 +5052,19 @@
             
             // Get unique accounts from all trades
             const allTrades = [...trades, ...closedTrades];
-            const accountsSet = new Set();
+            const accountsFromTrades = new Set();
             
             allTrades.forEach(trade => {
                 if (trade.account && trade.account.trim() !== '') {
-                    accountsSet.add(trade.account.trim());
+                    accountsFromTrades.add(trade.account.trim());
                 }
             });
             
+            // Combine with customAccounts to include all defined accounts
+            const allAccountsSet = new Set([...accountsFromTrades, ...customAccounts]);
+            
             // Sort accounts alphabetically
-            const accounts = Array.from(accountsSet).sort();
+            const accounts = Array.from(allAccountsSet).sort();
             
             // Save current selection
             const currentValue = filterSelect.value;
@@ -5834,6 +6201,102 @@
             closeAssignModal();
             
             alert(`${stockPosition.shares} shares of ${stockPosition.symbol} assigned at $${assignmentPrice.toFixed(2)} per share!`);
+        }
+
+        // Called Out Functions
+        let callingOutIndex = -1;
+
+        function openCalledOutModal(index) {
+            callingOutIndex = index;
+            const call = trades[index];
+            
+            // Pre-fill with today's date and strike price
+            document.getElementById('calledOutDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('calledOutPrice').value = call.strike;
+            document.getElementById('calledOutNotes').value = '';
+            
+            document.getElementById('calledOutModal').classList.add('active');
+        }
+
+        function closeCalledOutModal() {
+            document.getElementById('calledOutModal').classList.remove('active');
+            callingOutIndex = -1;
+        }
+
+        function calledOutFromAll(index) {
+            // Find the actual trade in the trades array
+            const allTrades = [...trades, ...closedTrades.filter(t => !t.isClosingTrade)];
+            const trade = allTrades[index];
+            
+            if (!trade) {
+                alert('Trade not found');
+                return;
+            }
+            
+            // Find index in trades array
+            const tradeIndex = trades.findIndex(t => t.id === trade.id);
+            if (tradeIndex >= 0) {
+                openCalledOutModal(tradeIndex);
+            } else {
+                alert('Can only call out open positions');
+            }
+        }
+
+        function confirmCalledOut() {
+            if (callingOutIndex < 0) return;
+            
+            const call = trades[callingOutIndex];
+            const calledOutDate = document.getElementById('calledOutDate').value;
+            const calledOutPrice = parseFloat(document.getElementById('calledOutPrice').value);
+            const calledOutNotes = document.getElementById('calledOutNotes').value;
+            
+            if (!calledOutDate || !calledOutPrice || calledOutPrice <= 0) {
+                alert('Please enter valid date and price');
+                return;
+            }
+            
+            // Mark call as closed and called away
+            call.status = 'closed';
+            call.dateClosed = calledOutDate;
+            call.calledOutPrice = calledOutPrice;
+            call.closingNotes = calledOutNotes || `Stock called away at $${calledOutPrice.toFixed(2)}`;
+            call.isCalledAway = true;
+            
+            // Move call to closed trades
+            closedTrades.push(call);
+            trades.splice(callingOutIndex, 1);
+            
+            // Create "CALLED AWAY" trade entry for tracking
+            const calledAwayTrade = {
+                id: Date.now() + Math.random(),
+                symbol: call.symbol,
+                action: 'called_away',
+                type: 'stock',
+                contracts: call.contracts,
+                shares: call.contracts * 100,
+                strike: call.strike,
+                calledOutPrice: calledOutPrice,
+                premium: 0,
+                priceAtAction: calledOutPrice,
+                dateOpened: calledOutDate,
+                expDate: calledOutDate,
+                tradeRef: call.tradeRef,
+                account: call.account,
+                info: calledOutNotes || `${call.contracts * 100} shares called away at $${calledOutPrice.toFixed(2)}`,
+                status: 'closed',
+                dateClosed: calledOutDate,
+                isCalledAway: true
+            };
+            closedTrades.push(calledAwayTrade);
+            
+            // Save and render
+            saveUserData();
+            renderOpenTrades();
+            renderAllTrades();
+            updateStats();
+            closeCalledOutModal();
+            
+            alert(`${call.contracts * 100} shares of ${call.symbol} called away at $${calledOutPrice.toFixed(2)} per share!`);
         }
 
         function renderStockPositions() {
