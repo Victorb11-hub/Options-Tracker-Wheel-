@@ -5319,74 +5319,41 @@
         }
 
         function calculateWeeklyPremium() {
-            // Calculate actual P/L for each trade and assign to appropriate week
+            // Use the SAME logic as dashboard Total P/L: sum up calculatePL for each trade
             
             const accountFilter = document.getElementById('dashboardAccountFilter')?.value || 'all';
             const weeklyPremiums = {};
-            const processedSells = new Set(); // Track which sells we've already counted
             
-            // Process all closed SELL trades
-            const allSells = closedTrades.filter(t => t.action === 'sell' && !t.isClosingTrade);
-            
-            allSells.forEach(trade => {
+            // Process ALL closed trades (both SELLs and BUYs)
+            closedTrades.forEach(trade => {
                 // Filter by account
                 if (accountFilter !== 'all' && trade.account !== accountFilter) return;
-                if (!trade.expDate) return;
-                if (processedSells.has(trade.id)) return; // Skip if already counted
                 
-                let pl = 0;
+                // Get P/L for this trade (same as dashboard)
+                const pl = calculatePL(trade, true);
+                if (!pl || pl === 0) return;
+                
+                // Determine which week to assign to
                 let targetWeek;
                 
-                if (trade.isRolled) {
-                    // For rolled trades: calculate roll credit and assign to NEW exp week
-                    const rollCredit = calculateRollCredit(trade);
-                    if (rollCredit !== null) {
-                        pl = rollCredit;
-                        
-                        // Find the new sell to get its exp date
-                        const buyback = closedTrades.find(t =>
-                            t.isClosingTrade && t.action === 'buy' &&
-                            t.tradeRef === trade.tradeRef && t.symbol === trade.symbol &&
-                            new Date(t.dateClosed).toDateString() === new Date(trade.dateClosed).toDateString()
-                        );
-                        
-                        if (buyback) {
-                            const newSell = allSells.find(t =>
-                                t.tradeRef === trade.tradeRef && t.symbol === trade.symbol &&
-                                t.id !== trade.id &&
-                                new Date(t.dateOpened).toDateString() === new Date(buyback.dateClosed).toDateString()
-                            );
-                            
-                            if (newSell) {
-                                processedSells.add(newSell.id); // Mark new sell as processed
-                                targetWeek = getWeekStart(newSell.expDate); // Use new exp date
-                            } else {
-                                return; // Can't find new sell, skip
-                            }
-                        } else {
-                            return; // Can't find buyback, skip
-                        }
-                    } else {
-                        return; // No roll credit, skip
-                    }
-                } else {
-                    // For non-rolled trades: calculate premium - buyback
-                    const premium = trade.premium * trade.contracts * 100;
-                    pl = premium;
-                    
-                    // Subtract buyback if exists
-                    const buyback = closedTrades.find(t =>
-                        t.isClosingTrade && t.action === 'buy' &&
-                        t.tradeRef === trade.tradeRef && t.symbol === trade.symbol &&
-                        new Date(t.dateClosed).toDateString() === new Date(trade.dateClosed || trade.expDate).toDateString()
+                if (trade.action === 'sell') {
+                    // SELLs go to their expiration week
+                    if (!trade.expDate) return;
+                    targetWeek = getWeekStart(trade.expDate);
+                } else if (trade.action === 'buy' && trade.isClosingTrade) {
+                    // BUYs (buybacks) go to the same week as their corresponding SELL
+                    // Find the SELL that this BUY is closing
+                    const correspondingSell = closedTrades.find(t =>
+                        t.action === 'sell' &&
+                        t.tradeRef === trade.tradeRef &&
+                        t.symbol === trade.symbol &&
+                        Math.abs(new Date(t.dateClosed || t.dateOpened) - new Date(trade.dateClosed || trade.dateOpened)) < 86400000 * 3
                     );
                     
-                    if (buyback) {
-                        pl -= buyback.premium * buyback.contracts * 100;
-                    }
-                    
-                    // Use closing week if closed early, otherwise exp week
-                    targetWeek = (trade.dateClosed && buyback) ? getWeekStart(trade.dateClosed) : getWeekStart(trade.expDate);
+                    if (!correspondingSell || !correspondingSell.expDate) return;
+                    targetWeek = getWeekStart(correspondingSell.expDate);
+                } else {
+                    return; // Skip other trades
                 }
                 
                 const weekKey = targetWeek.toISOString();
