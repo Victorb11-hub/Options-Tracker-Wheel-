@@ -5321,91 +5321,33 @@
         function calculateWeeklyPremium() {
             const accountFilter = document.getElementById('dashboardAccountFilter')?.value || 'all';
             const weeklyPremiums = {};
-            const processedSells = new Set(); // Track new SELLs after rolls
+            const processedSells = new Set();
             
             const allSells = closedTrades.filter(t => t.action === 'sell' && !t.isClosingTrade);
             
             allSells.forEach(trade => {
                 if (accountFilter !== 'all' && trade.account !== accountFilter) return;
                 if (!trade.expDate) return;
-                if (processedSells.has(trade.id)) return; // Skip new sells (already counted as roll credit)
+                if (processedSells.has(trade.id)) return;
                 
                 if (trade.isRolled) {
-                    // ROLLED OPTION
-                    // 1. Original premium goes to original expiration week
-                    const origPremium = trade.premium * trade.contracts * 100;
-                    const origWeek = getWeekStart(trade.expDate);
-                    const origWeekKey = origWeek.toISOString();
-                    
-                    if (!weeklyPremiums[origWeekKey]) {
-                        weeklyPremiums[origWeekKey] = {
-                            premium: 0,
-                            trades: 0,
-                            weekStart: origWeek,
-                            weekEnd: getWeekEnd(origWeek)
-                        };
-                    }
-                    
-                    weeklyPremiums[origWeekKey].premium += origPremium;
-                    weeklyPremiums[origWeekKey].trades += 1;
-                    
-                    // 2. Roll credit (new sell - buyback) goes to new expiration week
-                    const buyback = closedTrades.find(t =>
-                        t.isClosingTrade && t.action === 'buy' &&
-                        t.tradeRef === trade.tradeRef && t.symbol === trade.symbol &&
-                        new Date(t.dateClosed).toDateString() === new Date(trade.dateClosed).toDateString()
-                    );
-                    
-                    if (buyback) {
-                        const newSell = allSells.find(t =>
-                            t.tradeRef === trade.tradeRef && t.symbol === trade.symbol &&
-                            t.id !== trade.id &&
-                            new Date(t.dateOpened).toDateString() === new Date(buyback.dateClosed).toDateString()
-                        );
-                        
-                        if (newSell) {
-                            processedSells.add(newSell.id); // Mark as processed
-                            
-                            const rollCredit = (newSell.premium * newSell.contracts * 100) - (buyback.premium * buyback.contracts * 100);
-                            const newWeek = getWeekStart(newSell.expDate);
-                            const newWeekKey = newWeek.toISOString();
-                            
-                            if (!weeklyPremiums[newWeekKey]) {
-                                weeklyPremiums[newWeekKey] = {
-                                    premium: 0,
-                                    trades: 0,
-                                    weekStart: newWeek,
-                                    weekEnd: getWeekEnd(newWeek)
-                                };
-                            }
-                            
-                            weeklyPremiums[newWeekKey].premium += rollCredit;
-                            weeklyPremiums[newWeekKey].trades += 1;
-                        }
-                    }
+                    // TODO: Add rolled trade logic here after Victor explains step by step
+                    // Temporarily disabled to start fresh
                 } else {
-                    // REGULAR (NON-ROLLED) OPTION
-                    const premium = trade.premium * trade.contracts * 100;
+                    // NON-ROLLED TRADE
+                    let netPremium = trade.premium * trade.contracts * 100;
                     
-                    // Find buyback if exists
                     const buyback = closedTrades.find(t =>
                         t.isClosingTrade && t.action === 'buy' &&
                         t.tradeRef === trade.tradeRef && t.symbol === trade.symbol &&
                         Math.abs(new Date(t.dateClosed) - new Date(trade.dateClosed || trade.expDate)) < 86400000 * 3
                     );
                     
-                    let targetWeek, netPremium;
-                    
                     if (buyback) {
-                        // Bought back early: net goes to buyback week
-                        netPremium = premium - (buyback.premium * buyback.contracts * 100);
-                        targetWeek = getWeekStart(trade.dateClosed);
-                    } else {
-                        // Expired: full premium goes to expiration week
-                        netPremium = premium;
-                        targetWeek = getWeekStart(trade.expDate);
+                        netPremium -= buyback.premium * buyback.contracts * 100;
                     }
                     
+                    const targetWeek = buyback ? getWeekStart(trade.dateClosed) : getWeekStart(trade.expDate);
                     const weekKey = targetWeek.toISOString();
                     
                     if (!weeklyPremiums[weekKey]) {
@@ -5416,7 +5358,6 @@
                             weekEnd: getWeekEnd(targetWeek)
                         };
                     }
-                    
                     weeklyPremiums[weekKey].premium += netPremium;
                     weeklyPremiums[weekKey].trades += 1;
                 }
