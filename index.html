@@ -5290,8 +5290,21 @@
         }
 
         function getWeekStart(date) {
+            // Parse date string correctly to avoid timezone issues
+            let d;
+            if (typeof date === 'string') {
+                // Parse as local date, not UTC
+                const parts = date.split('-');
+                if (parts.length === 3) {
+                    d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                } else {
+                    d = new Date(date);
+                }
+            } else {
+                d = new Date(date);
+            }
+            
             // Get Monday of the week containing this date
-            const d = new Date(date);
             const day = d.getDay();
             const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
             const monday = new Date(d.setDate(diff));
@@ -5332,7 +5345,8 @@
                 
                 if (trade.isRolled) {
                     // TODO: Add rolled trade logic here after Victor explains step by step
-                    // Temporarily disabled to start fresh
+                    // Skipping all rolled trades for now
+                    return;
                 } else {
                     // NON-ROLLED TRADE
                     let netPremium = trade.premium * trade.contracts * 100;
