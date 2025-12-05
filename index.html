@@ -5319,41 +5319,44 @@
         }
 
         function calculateWeeklyPremium() {
-            // Use the SAME logic as dashboard Total P/L: sum up calculatePL for each trade
+            // Use the Credit column that's already calculated correctly
             
             const accountFilter = document.getElementById('dashboardAccountFilter')?.value || 'all';
             const weeklyPremiums = {};
             
-            // Process ALL closed trades (both SELLs and BUYs)
-            closedTrades.forEach(trade => {
-                // Filter by account
+            // Process only SELL trades (BUYs don't contribute, they're already netted in the Credit)
+            const allSells = closedTrades.filter(t => t.action === 'sell' && !t.isClosingTrade);
+            
+            allSells.forEach(trade => {
                 if (accountFilter !== 'all' && trade.account !== accountFilter) return;
+                if (!trade.expDate) return;
                 
-                // Get P/L for this trade (same as dashboard)
-                const pl = calculatePL(trade, true);
-                if (!pl || pl === 0) return;
-                
-                // Determine which week to assign to
+                let pl = 0;
                 let targetWeek;
                 
-                if (trade.action === 'sell') {
-                    // SELLs go to their expiration week
-                    if (!trade.expDate) return;
-                    targetWeek = getWeekStart(trade.expDate);
-                } else if (trade.action === 'buy' && trade.isClosingTrade) {
-                    // BUYs (buybacks) go to the same week as their corresponding SELL
-                    // Find the SELL that this BUY is closing
-                    const correspondingSell = closedTrades.find(t =>
-                        t.action === 'sell' &&
-                        t.tradeRef === trade.tradeRef &&
-                        t.symbol === trade.symbol &&
-                        Math.abs(new Date(t.dateClosed || t.dateOpened) - new Date(trade.dateClosed || trade.dateOpened)) < 86400000 * 3
+                if (trade.isRolled) {
+                    // For rolled trades: use the Credit column (calculateRollCredit)
+                    const credit = calculateRollCredit(trade);
+                    if (credit === null || credit === 0) return; // Skip if no credit
+                    
+                    pl = credit;
+                    targetWeek = getWeekStart(trade.expDate); // Use the rolled trade's exp date
+                } else {
+                    // For non-rolled trades: calculate net (premium - buyback)
+                    pl = trade.premium * trade.contracts * 100;
+                    
+                    const buyback = closedTrades.find(t =>
+                        t.isClosingTrade && t.action === 'buy' &&
+                        t.tradeRef === trade.tradeRef && t.symbol === trade.symbol &&
+                        Math.abs(new Date(t.dateClosed) - new Date(trade.dateClosed || trade.expDate)) < 86400000 * 3
                     );
                     
-                    if (!correspondingSell || !correspondingSell.expDate) return;
-                    targetWeek = getWeekStart(correspondingSell.expDate);
-                } else {
-                    return; // Skip other trades
+                    if (buyback) {
+                        pl -= buyback.premium * buyback.contracts * 100;
+                        targetWeek = getWeekStart(trade.dateClosed); // Closed early
+                    } else {
+                        targetWeek = getWeekStart(trade.expDate); // Expired
+                    }
                 }
                 
                 const weekKey = targetWeek.toISOString();
