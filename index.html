@@ -2952,8 +2952,8 @@
                 allTrades.push({...t, isOpen: true, status: 'open'});
             });
             
-            // Add closed trades
-            closedTrades.filter(t => !t.isClosingTrade).forEach(t => {
+            // Add ALL closed trades including closing trades (buybacks)
+            closedTrades.forEach(t => {
                 allTrades.push({...t, isOpen: false, status: t.status || 'closed'});
             });
             
@@ -3324,7 +3324,10 @@
             let html = '';
             
             filteredTrades.forEach((trade, index) => {
-                const actualIndex = trades.indexOf(trade);
+                // Check if this is an open or closed trade
+                const isOpenTrade = trades.includes(trade);
+                const actualIndex = isOpenTrade ? trades.indexOf(trade) : -1;
+                
                 const cashRequired = calculateCashRequired(trade);
                 const returnPercent = calculateReturnPercent(trade);
                 const otm = calculateOTM(trade);
@@ -3334,9 +3337,9 @@
                 symbolCollateral += cashRequired;
                 // Don't add pl here yet - we'll calculate total P&L including roll history below
 
-                // Current open position row
+                // Trade row (works for both open and closed)
                 html += `
-                    <tr style="background: #0a0a0a;">
+                    <tr style="background: ${isOpenTrade ? '#0a0a0a' : '#1a1a1a'};">
                         <td>${makeSymbolClickable(trade.symbol, trade.isRolled)}</td>
                         <td>${trade.contracts}</td>
                         <td>$${trade.strike.toFixed(2)}</td>
@@ -3355,15 +3358,19 @@
                         <td style="color: #00ff88;"><strong>${trade.tradeRef || '-'}</strong></td>
                         <td>${trade.account || '-'}</td>
                         <td>
-                            <div class="action-buttons">
-                                <button class="btn-small" onclick="editTrade(${actualIndex})">Edit</button>
-                                <button class="btn-small" style="background: #4488ff; color: #fff;" onclick="openRollModal(${actualIndex})">Roll</button>
-                                <button class="btn-small success" onclick="openCloseModal(${actualIndex})">Close</button>
-                                ${trade.type === 'put' && trade.action === 'sell' ? `
-                                    <button class="btn-small" style="background: #ff8844; color: #000;" onclick="assignStock(${actualIndex})">Assign</button>
-                                ` : ''}
-                                <button class="btn-small danger" onclick="deleteTrade(${actualIndex})">Delete</button>
-                            </div>
+                            ${isOpenTrade ? `
+                                <div class="action-buttons">
+                                    <button class="btn-small" onclick="editTrade(${actualIndex})">Edit</button>
+                                    <button class="btn-small" style="background: #4488ff; color: #fff;" onclick="openRollModal(${actualIndex})">Roll</button>
+                                    <button class="btn-small success" onclick="openCloseModal(${actualIndex})">Close</button>
+                                    ${trade.type === 'put' && trade.action === 'sell' ? `
+                                        <button class="btn-small" style="background: #ff8844; color: #000;" onclick="assignStock(${actualIndex})">Assign</button>
+                                    ` : ''}
+                                    <button class="btn-small danger" onclick="deleteTrade(${actualIndex})">Delete</button>
+                                </div>
+                            ` : `
+                                <span style="color: #666;">CLOSED</span>
+                            `}
                         </td>
                     </tr>
                 `;
