@@ -2899,8 +2899,11 @@
                 return;
             }
             
-            // Filter trades by selected stock
-            let filteredTrades = trades.filter(t => t.symbol === selectedStock);
+            // Filter BOTH open and closed trades by selected stock
+            let filteredTrades = [
+                ...trades.filter(t => t.symbol === selectedStock),
+                ...closedTrades.filter(t => t.symbol === selectedStock && !t.isClosingTrade)
+            ];
             
             // Sort the filtered trades
             filteredTrades.sort((a, b) => {
@@ -3295,8 +3298,11 @@
                 // Use pre-sorted array
                 filteredTrades = window.sortedOpenByStock;
             } else {
-                // Filter trades by selected symbol
-                filteredTrades = trades.filter(t => t.symbol === selectedSymbol);
+                // Filter BOTH open and closed trades by selected symbol
+                filteredTrades = [
+                    ...trades.filter(t => t.symbol === selectedSymbol),
+                    ...closedTrades.filter(t => t.symbol === selectedSymbol && !t.isClosingTrade)
+                ];
                 // Clear sorted array since we're using a new filter
                 window.sortedOpenByStock = null;
             }
