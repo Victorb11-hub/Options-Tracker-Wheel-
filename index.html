@@ -7137,8 +7137,51 @@
                 }
             }
             
+            // Validate data integrity
+            validateDataIntegrity();
+            
             renderTables();
             updateStats();
+        }
+        
+        function validateDataIntegrity() {
+            // Check for impossible dates (closed before opened)
+            let issuesFound = 0;
+            
+            [...trades, ...closedTrades].forEach(t => {
+                if (t.dateOpened && t.dateClosed) {
+                    if (new Date(t.dateClosed) < new Date(t.dateOpened)) {
+                        console.warn(`⚠️ Data issue: ${t.symbol} ${t.tradeRef} closed (${t.dateClosed}) before opened (${t.dateOpened})`);
+                        issuesFound++;
+                    }
+                }
+                if (t.dateOpened && t.expDate) {
+                    if (new Date(t.expDate) < new Date(t.dateOpened)) {
+                        console.warn(`⚠️ Data issue: ${t.symbol} ${t.tradeRef} expires (${t.expDate}) before opened (${t.dateOpened})`);
+                        issuesFound++;
+                    }
+                }
+            });
+            
+            // Check tradeGroups too
+            tradeGroups.forEach(group => {
+                if (group.trades) {
+                    group.trades.forEach(t => {
+                        if (t.dateOpened && t.dateClosed) {
+                            if (new Date(t.dateClosed) < new Date(t.dateOpened)) {
+                                console.warn(`⚠️ Data issue in group: ${t.symbol} ${t.tradeRef} closed (${t.dateClosed}) before opened (${t.dateOpened})`);
+                                issuesFound++;
+                            }
+                        }
+                    });
+                }
+            });
+            
+            if (issuesFound > 0) {
+                console.warn(`⚠️ Found ${issuesFound} data integrity issues. Check console for details.`);
+            } else {
+                console.log('✅ Data integrity check passed');
+            }
         }
 
         function downloadTemplate() {
