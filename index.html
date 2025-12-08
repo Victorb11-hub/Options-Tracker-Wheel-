@@ -5358,7 +5358,7 @@
                 
                 if (trade.isRolled) {
                     // ROLLED TRADES
-                    // Check if this is the FIRST sell in the roll chain (earliest dateOpened)
+                    // Check if this is the FIRST sell in the roll chain
                     const isFirstInChain = !allSells.some(t => 
                         t.tradeRef === trade.tradeRef &&
                         t.symbol === trade.symbol &&
@@ -5366,8 +5366,8 @@
                         new Date(t.dateOpened) < new Date(trade.dateOpened)
                     );
                     
+                    // Add original premium if this is the first in chain
                     if (isFirstInChain) {
-                        // This is the ORIGINAL sell - add its premium to its exp week
                         const origPremium = trade.premium * trade.contracts * 100;
                         const origWeek = getWeekStart(trade.expDate);
                         const origWeekKey = origWeek.toISOString();
@@ -5384,7 +5384,7 @@
                         weeklyPremiums[origWeekKey].trades += 1;
                     }
                     
-                    // Calculate roll credit and add to new exp week
+                    // Calculate and add roll credit
                     const buyback = closedTrades.find(t =>
                         t.isClosingTrade && t.action === 'buy' &&
                         t.tradeRef === trade.tradeRef && t.symbol === trade.symbol &&
@@ -5401,7 +5401,6 @@
                         if (newSell) {
                             processedSells.add(newSell.id);
                             
-                            // Roll credit = new sell premium - buyback cost
                             const rollCredit = (newSell.premium * newSell.contracts * 100) - (buyback.premium * buyback.contracts * 100);
                             const newWeek = getWeekStart(newSell.expDate);
                             const newWeekKey = newWeek.toISOString();
@@ -5418,10 +5417,8 @@
                             weeklyPremiums[newWeekKey].trades += 1;
                         }
                     }
-                    
-                    return; // Skip further processing for rolled trades
                 } else {
-                    // NON-ROLLED TRADE
+                    // NON-ROLLED TRADES
                     let netPremium = trade.premium * trade.contracts * 100;
                     
                     const buyback = closedTrades.find(t =>
