@@ -2607,8 +2607,8 @@
                 return trade.strike * trade.contracts * 100;
             }
             
-            // Covered calls: cash required = strike * contracts * 100
-            if (trade.type === 'call' && trade.action === 'sell' && trade.isCoveredCall) {
+            // All SELL calls require cash (covered calls)
+            if (trade.type === 'call' && trade.action === 'sell') {
                 return trade.strike * trade.contracts * 100;
             }
             
