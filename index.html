@@ -6929,40 +6929,48 @@
         }
 
         function editTradeFromAll(index, isOpen) {
-            // Reconstruct allTrades EXACTLY as in renderAllTrades
-            const openTrades = trades.map(t => ({...t, isOpen: true}));
-            const closedTradesArray = closedTrades.map(t => ({...t, isOpen: false}));
+            // Use the SAME array that was used for rendering
+            let allTrades;
             
-            // Also get trades from groups
-            const groupTrades = [];
-            tradeGroups.forEach(group => {
-                if (group.trades && Array.isArray(group.trades)) {
-                    group.trades.forEach(trade => {
-                        const alreadyExists = openTrades.some(t => 
-                            t.symbol === trade.symbol && 
-                            t.dateOpened === trade.dateOpened && 
-                            t.strike === trade.strike &&
-                            t.premium === trade.premium &&
-                            t.action === trade.action
-                        ) || closedTradesArray.some(t => 
-                            t.symbol === trade.symbol && 
-                            t.dateOpened === trade.dateOpened && 
-                            t.strike === trade.strike &&
-                            t.premium === trade.premium &&
-                            t.action === trade.action
-                        );
-                        
-                        if (!alreadyExists) {
-                            groupTrades.push({...trade, isOpen: trade.status === 'open'});
-                        }
-                    });
-                }
-            });
-            
-            const allTrades = [...openTrades, ...closedTradesArray, ...groupTrades];
-            
-            // Sort by date opened (most recent first) - SAME AS renderAllTrades
-            allTrades.sort((a, b) => new Date(b.dateOpened) - new Date(a.dateOpened));
+            if (window.sortedAllTrades && window.sortedAllTrades.length > 0) {
+                // Use the sorted array from renderAllTrades
+                allTrades = window.sortedAllTrades;
+            } else {
+                // Reconstruct allTrades EXACTLY as in renderAllTrades
+                const openTrades = trades.map(t => ({...t, isOpen: true}));
+                const closedTradesArray = closedTrades.map(t => ({...t, isOpen: false}));
+                
+                // Also get trades from groups
+                const groupTrades = [];
+                tradeGroups.forEach(group => {
+                    if (group.trades && Array.isArray(group.trades)) {
+                        group.trades.forEach(trade => {
+                            const alreadyExists = openTrades.some(t => 
+                                t.symbol === trade.symbol && 
+                                t.dateOpened === trade.dateOpened && 
+                                t.strike === trade.strike &&
+                                t.premium === trade.premium &&
+                                t.action === trade.action
+                            ) || closedTradesArray.some(t => 
+                                t.symbol === trade.symbol && 
+                                t.dateOpened === trade.dateOpened && 
+                                t.strike === trade.strike &&
+                                t.premium === trade.premium &&
+                                t.action === trade.action
+                            );
+                            
+                            if (!alreadyExists) {
+                                groupTrades.push({...trade, isOpen: trade.status === 'open'});
+                            }
+                        });
+                    }
+                });
+                
+                allTrades = [...openTrades, ...closedTradesArray, ...groupTrades];
+                
+                // Sort by date opened (most recent first)
+                allTrades.sort((a, b) => new Date(b.dateOpened) - new Date(a.dateOpened));
+            }
             
             const tradeToEdit = allTrades[index];
             
