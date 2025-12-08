@@ -5347,17 +5347,71 @@
         function calculateWeeklyPremium() {
             const accountFilter = document.getElementById('dashboardAccountFilter')?.value || 'all';
             const weeklyPremiums = {};
-            const processedSells = new Set();
+            const processed = new Set();
             
-            const allSells = closedTrades.filter(t => t.action === 'sell' && !t.isClosingTrade);
+            // Include BOTH open and closed trades to capture roll credits for open positions
+            const allSells = [...trades, ...closedTrades].filter(t => t.action === 'sell' && !t.isClosingTrade);
             
             allSells.forEach(trade => {
                 if (accountFilter !== 'all' && trade.account !== accountFilter) return;
                 if (!trade.expDate) return;
-                if (processedSells.has(trade.id)) return;
+                if (processed.has(trade.id)) return;
                 
                 if (trade.isRolled) {
-                    // ROLLED TRADES
+                    // Get ALL sells in this roll chain, sorted by date
+                    const chain = allSells
+                        .filter(t => t.tradeRef === trade.tradeRef && t.symbol === trade.symbol && t.isRolled)
+                        .sort((a,b) => new Date(a.dateOpened) - new Date(b.dateOpened));
+                    
+                    chain.forEach((sell, idx) => {
+                        processed.add(sell.id);
+                        
+                        // Only add original premium for the FIRST trade in chain
+                        if (idx === 0) {
+                            const amt = sell.premium * sell.contracts * 100;
+                            const wk = getWeekStart(sell.expDate);
+                            const key = wk.toISOString();
+                            if (!weeklyPremiums[key]) weeklyPremiums[key] = {premium: 0, trades: 0, weekStart: wk, weekEnd: getWeekEnd(wk)};
+                            weeklyPremiums[key].premium += amt;
+                            weeklyPremiums[key].trades++;
+                        }
+                        
+                        // Find buyback for this leg
+                        const buyback = closedTrades.find(t =>
+                            t.isClosingTrade && t.action === 'buy' && 
+                            t.tradeRef === sell.tradeRef && t.symbol === sell.symbol &&
+                            new Date(t.dateClosed).toDateString() === new Date(sell.dateClosed).toDateString()
+                        );
+                        
+                        // If there's a next sell in chain, add roll credit
+                        if (buyback && chain[idx + 1]) {
+                            const nextSell = chain[idx + 1];
+                            const rollAmt = (nextSell.premium * nextSell.contracts * 100) - (buyback.premium * buyback.contracts * 100);
+                            const wk = getWeekStart(nextSell.expDate);
+                            const key = wk.toISOString();
+                            if (!weeklyPremiums[key]) weeklyPremiums[key] = {premium: 0, trades: 0, weekStart: wk, weekEnd: getWeekEnd(wk)};
+                            weeklyPremiums[key].premium += rollAmt;
+                            weeklyPremiums[key].trades++;
+                        }
+                    });
+                } else {
+                    // NON-ROLLED TRADE
+                    let amt = trade.premium * trade.contracts * 100;
+                    const buyback = closedTrades.find(t =>
+                        t.isClosingTrade && t.action === 'buy' && 
+                        t.tradeRef === trade.tradeRef && t.symbol === trade.symbol &&
+                        Math.abs(new Date(t.dateClosed) - new Date(trade.dateClosed || trade.expDate)) < 86400000 * 3
+                    );
+                    if (buyback) amt -= buyback.premium * buyback.contracts * 100;
+                    
+                    const wk = buyback ? getWeekStart(trade.dateClosed) : getWeekStart(trade.expDate);
+                    const key = wk.toISOString();
+                    if (!weeklyPremiums[key]) weeklyPremiums[key] = {premium: 0, trades: 0, weekStart: wk, weekEnd: getWeekEnd(wk)};
+                    weeklyPremiums[key].premium += amt;
+                    weeklyPremiums[key].trades++;
+                    processed.add(trade.id);
+                }
+            });
                     // Check if this is the FIRST sell in the roll chain
                     const isFirstInChain = !allSells.some(t => 
                         t.tradeRef === trade.tradeRef &&
