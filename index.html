@@ -2310,12 +2310,17 @@
             tradeGroups = previousState.tradeGroups;
             stockPositions = previousState.stockPositions;
             
+            // Save to localStorage
             saveData();
-            renderTrades();
+            
+            // Refresh all displays
+            renderOpenTrades();
             renderClosedGroups();
             renderAllTrades();
             renderStockPositions();
             updateStats();
+            updateDashboardMetrics();
+            updateTabBadges();
             updateUndoRedoButtons();
             
             showNotification(`Undid: ${previousState.action}`, 'success');
@@ -2341,12 +2346,17 @@
             tradeGroups = nextState.tradeGroups;
             stockPositions = nextState.stockPositions;
             
+            // Save to localStorage
             saveData();
-            renderTrades();
+            
+            // Refresh all displays
+            renderOpenTrades();
             renderClosedGroups();
             renderAllTrades();
             renderStockPositions();
             updateStats();
+            updateDashboardMetrics();
+            updateTabBadges();
             updateUndoRedoButtons();
             
             showNotification('Redo applied', 'success');
