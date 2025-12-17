@@ -964,6 +964,12 @@
                 <button class="tab" onclick="switchTab('stock')">Stock Positions <span class="tab-badge" id="tabStockCount">0</span></button>
             </div>
             <div style="display: flex; gap: 10px; padding-bottom: 12px; align-items: center;">
+                <button id="undoBtn" onclick="undo()" disabled style="background: #2a2a2a; color: #888; border: 1px solid #444; padding: 10px 15px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; transition: all 0.2s;" title="Undo (Ctrl+Z)">
+                    <span style="font-size: 1.2rem;">←</span>
+                </button>
+                <button id="redoBtn" onclick="redo()" disabled style="background: #2a2a2a; color: #888; border: 1px solid #444; padding: 10px 15px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; transition: all 0.2s;" title="Redo (Ctrl+Y)">
+                    <span style="font-size: 1.2rem;">→</span>
+                </button>
                 <button onclick="openTradeModal()" style="background: #00ff88; color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
                     <span style="font-size: 1.2rem; line-height: 1;">+</span>
                     New Trade
@@ -2252,6 +2258,133 @@
         const CURRENT_DATA_VERSION = 4;
         let editingFromArray = 'open'; // Track which array we're editing from
         let editingFromGroup = -1; // Track if editing from a group
+        
+        // Undo/Redo state management
+        let undoStack = [];
+        let redoStack = [];
+        const MAX_UNDO_STACK = 50;
+        
+        function captureState(actionDescription) {
+            const state = {
+                trades: JSON.parse(JSON.stringify(trades)),
+                closedTrades: JSON.parse(JSON.stringify(closedTrades)),
+                tradeGroups: JSON.parse(JSON.stringify(tradeGroups)),
+                stockPositions: JSON.parse(JSON.stringify(stockPositions)),
+                action: actionDescription,
+                timestamp: Date.now()
+            };
+            
+            undoStack.push(state);
+            if (undoStack.length > MAX_UNDO_STACK) {
+                undoStack.shift(); // Remove oldest
+            }
+            
+            // Clear redo stack when new action is performed
+            redoStack = [];
+            updateUndoRedoButtons();
+        }
+        
+        function undo() {
+            if (undoStack.length === 0) return;
+            
+            // Save current state to redo stack
+            const currentState = {
+                trades: JSON.parse(JSON.stringify(trades)),
+                closedTrades: JSON.parse(JSON.stringify(closedTrades)),
+                tradeGroups: JSON.parse(JSON.stringify(tradeGroups)),
+                stockPositions: JSON.parse(JSON.stringify(stockPositions)),
+                timestamp: Date.now()
+            };
+            redoStack.push(currentState);
+            
+            // Restore previous state
+            const previousState = undoStack.pop();
+            trades = previousState.trades;
+            closedTrades = previousState.closedTrades;
+            tradeGroups = previousState.tradeGroups;
+            stockPositions = previousState.stockPositions;
+            
+            saveData();
+            renderTrades();
+            renderClosedGroups();
+            renderAllTrades();
+            renderStockPositions();
+            updateStats();
+            updateUndoRedoButtons();
+            
+            showNotification(`Undid: ${previousState.action}`, 'success');
+        }
+        
+        function redo() {
+            if (redoStack.length === 0) return;
+            
+            // Save current state to undo stack
+            const currentState = {
+                trades: JSON.parse(JSON.stringify(trades)),
+                closedTrades: JSON.parse(JSON.stringify(closedTrades)),
+                tradeGroups: JSON.parse(JSON.stringify(tradeGroups)),
+                stockPositions: JSON.parse(JSON.stringify(stockPositions)),
+                timestamp: Date.now()
+            };
+            undoStack.push(currentState);
+            
+            // Restore next state
+            const nextState = redoStack.pop();
+            trades = nextState.trades;
+            closedTrades = nextState.closedTrades;
+            tradeGroups = nextState.tradeGroups;
+            stockPositions = nextState.stockPositions;
+            
+            saveData();
+            renderTrades();
+            renderClosedGroups();
+            renderAllTrades();
+            renderStockPositions();
+            updateStats();
+            updateUndoRedoButtons();
+            
+            showNotification('Redo applied', 'success');
+        }
+        
+        function updateUndoRedoButtons() {
+            const undoBtn = document.getElementById('undoBtn');
+            const redoBtn = document.getElementById('redoBtn');
+            
+            if (undoStack.length > 0) {
+                undoBtn.disabled = false;
+                undoBtn.style.background = '#3a3a3a';
+                undoBtn.style.color = '#fff';
+                undoBtn.style.cursor = 'pointer';
+            } else {
+                undoBtn.disabled = true;
+                undoBtn.style.background = '#2a2a2a';
+                undoBtn.style.color = '#888';
+                undoBtn.style.cursor = 'not-allowed';
+            }
+            
+            if (redoStack.length > 0) {
+                redoBtn.disabled = false;
+                redoBtn.style.background = '#3a3a3a';
+                redoBtn.style.color = '#fff';
+                redoBtn.style.cursor = 'pointer';
+            } else {
+                redoBtn.disabled = true;
+                redoBtn.style.background = '#2a2a2a';
+                redoBtn.style.color = '#888';
+                redoBtn.style.cursor = 'not-allowed';
+            }
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                undo();
+            } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                e.preventDefault();
+                redo();
+            }
+        });
         let closingIndex = -1;
         let rollingIndex = -1; // Track which position is being rolled
         let currentTab = 'dashboard';
@@ -2422,6 +2555,8 @@
                     // This is a closing trade! Mark the original as closed and group them
                     console.log('Smart close detected! Closing trade:', matchingOpenTrade);
                     
+                    captureState(`Close ${symbol} via smart detection`);
+                    
                     matchingOpenTrade.status = 'closed';
                     matchingOpenTrade.dateClosed = dateOpened;
                     
@@ -2505,6 +2640,7 @@
                 status: 'open'
             };
 
+            captureState(editingIndex >= 0 ? `Edit ${symbol} trade` : `Add ${symbol} trade`);
             trades.push(trade);
             saveData();
             renderTables();
@@ -4602,6 +4738,8 @@
                     groupName: group.name
                 };
                 
+                captureState(`Delete ${tradeToDelete.symbol} from group`);
+                
                 // Remove from group
                 group.trades.splice(tradeIndex, 1);
                 
@@ -5658,6 +5796,8 @@
 
         function saveEdit() {
             if (editingIndex >= 0) {
+                captureState(`Edit trade`);
+                
                 const updatedTrade = {
                     tradeRef: document.getElementById('editTradeRef').value.trim(),
                     symbol: document.getElementById('editSymbol').value.toUpperCase().trim(),
@@ -5755,6 +5895,8 @@
                     alert('Please enter at least a new strike and expiration date');
                     return;
                 }
+                
+                captureState(`Roll ${originalTrade.symbol} position`);
                 
                 // 1. Mark original trade as closed AND rolled
                 originalTrade.status = 'closed';
@@ -5875,6 +6017,8 @@
                 alert('Please enter a close date');
                 return;
             }
+            
+            captureState(`Close ${openingTrade.symbol} position`);
             
             console.log('Closing trade:', openingTrade);
             console.log('Close date:', closeDate, 'Closing premium:', closingPremium);
@@ -6169,6 +6313,8 @@
                 return;
             }
             
+            captureState(`Assign ${put.symbol} stock`);
+            
             // Create stock position
             const stockPosition = {
                 id: Date.now(),
@@ -6462,6 +6608,8 @@
                 return;
             }
             
+            captureState(`Mark ${stock.symbol} as called away`);
+            
             // Calculate full cycle P&L
             const putPremium = stock.originalPut.premiumCollected;
             const callPremiums = stock.coveredCalls.reduce((sum, call) => sum + call.premium, 0);
@@ -6648,6 +6796,8 @@
             
             const stock = stockPositions[index];
             console.log('Deleting stock position:', stock);
+            
+            captureState(`Delete ${stock.symbol} stock position`);
             
             // 1. Delete the original assigned PUT from closedTrades
             const assignedPutIndex = closedTrades.findIndex(t => 
@@ -6845,6 +6995,8 @@
                 // Save for undo
                 lastDeletedTrade = {...tradeToDelete};
                 lastDeletedGroupInfo = null;
+                
+                captureState(`Delete ${tradeToDelete.symbol} trade`);
                 
                 if (tradeToDelete.isOpen) {
                     // Find and delete from open trades
