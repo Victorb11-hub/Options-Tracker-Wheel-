@@ -2265,23 +2265,29 @@
         const MAX_UNDO_STACK = 50;
         
         function captureState(actionDescription) {
-            const state = {
-                trades: JSON.parse(JSON.stringify(trades)),
-                closedTrades: JSON.parse(JSON.stringify(closedTrades)),
-                tradeGroups: JSON.parse(JSON.stringify(tradeGroups)),
-                stockPositions: JSON.parse(JSON.stringify(stockPositions)),
-                action: actionDescription,
-                timestamp: Date.now()
-            };
-            
-            undoStack.push(state);
-            if (undoStack.length > MAX_UNDO_STACK) {
-                undoStack.shift(); // Remove oldest
+            try {
+                const state = {
+                    trades: JSON.parse(JSON.stringify(trades)),
+                    closedTrades: JSON.parse(JSON.stringify(closedTrades)),
+                    tradeGroups: JSON.parse(JSON.stringify(tradeGroups)),
+                    stockPositions: JSON.parse(JSON.stringify(stockPositions)),
+                    action: actionDescription,
+                    timestamp: Date.now()
+                };
+                
+                undoStack.push(state);
+                if (undoStack.length > MAX_UNDO_STACK) {
+                    undoStack.shift(); // Remove oldest
+                }
+                
+                // Clear redo stack when new action is performed
+                redoStack = [];
+                updateUndoRedoButtons();
+                
+                console.log('✅ Captured state:', actionDescription, 'Stack size:', undoStack.length);
+            } catch (error) {
+                console.error('❌ Error capturing state:', error);
             }
-            
-            // Clear redo stack when new action is performed
-            redoStack = [];
-            updateUndoRedoButtons();
         }
         
         function undo() {
@@ -6004,11 +6010,18 @@
             }
             
             if (closingIndex >= trades.length) {
-                alert('Error: Trade index out of bounds');
+                alert('Error: Trade index out of bounds. The trade may have been deleted or modified. Please close this dialog and try again.');
+                closeCloseModal();
                 return;
             }
             
             const openingTrade = trades[closingIndex];
+            if (!openingTrade) {
+                alert('Error: Could not find trade to close');
+                closeCloseModal();
+                return;
+            }
+            
             const closeDate = document.getElementById('closeDate').value;
             const closingPremium = parseFloat(document.getElementById('closingPremium').value) || 0;
             const closingNotes = document.getElementById('closingNotes').value;
