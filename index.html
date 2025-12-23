@@ -7361,17 +7361,33 @@
                     'Symbol': 'TSLA',
                     'Contracts': 2,
                     'Strike': 220.00,
-                    'Premium': 600.00,
-                    'Premium Format': 'total dollars',
-                    'Action': 'sell',
+                    'Premium': 0,
+                    'Premium Format': 'per contract',
+                    'Action': 'expired',
                     'Type': 'put',
                     'Status': 'closed',
-                    'Date Open / Date Closed': '2024-11-20',
+                    'Date Open / Date Closed': '2024-12-20',
                     'Exp Date': '2024-12-20',
                     'Price At Action': 225.00,
-                    'Info': 'Premium is $600 total (will convert to 3.00 per contract)',
+                    'Info': 'Expired worthless - Action is "expired" so date is Date Closed',
                     'Trade Ref': '2',
                     'Account': 'IRA'
+                },
+                {
+                    'Symbol': 'NVDA',
+                    'Contracts': 3,
+                    'Strike': 140.00,
+                    'Premium': 450.00,
+                    'Premium Format': 'total dollars',
+                    'Action': 'roll',
+                    'Type': 'put',
+                    'Status': 'open',
+                    'Date Open / Date Closed': '2024-12-15',
+                    'Exp Date': '2024-12-27',
+                    'Price At Action': 142.50,
+                    'Info': 'Rolled position - Action is "roll" so date is Date Opened',
+                    'Trade Ref': '3',
+                    'Account': 'Main'
                 },
                 {
                     'Symbol': 'MSFT',
@@ -7390,7 +7406,7 @@
                     'Account': 'Main'
                 },
                 {
-                    'Symbol': 'NVDA',
+                    'Symbol': 'SPY',
                     'Contracts': 1,
                     'Strike': 155.00,
                     'Premium': 99.00,
@@ -7433,15 +7449,15 @@
                 { wch: 10 },  // Symbol
                 { wch: 10 },  // Contracts
                 { wch: 10 },  // Strike
-                { wch: 10 },  // Premium
+                { wch: 12 },  // Premium
+                { wch: 16 },  // Premium Format
                 { wch: 10 },  // Action
                 { wch: 8 },   // Type
                 { wch: 10 },  // Status
-                { wch: 15 },  // Date Opened
-                { wch: 15 },  // Date Closed
+                { wch: 20 },  // Date Open / Date Closed
                 { wch: 15 },  // Exp Date
                 { wch: 15 },  // Price At Action
-                { wch: 30 },  // Info
+                { wch: 40 },  // Info
                 { wch: 12 },  // Trade Ref
                 { wch: 12 }   // Account
             ];
@@ -7953,19 +7969,22 @@
                     const type = String(row.Type || row.type || '').toLowerCase();
                     
                     // Handle new "Date Open / Date Closed" column format
-                    // If Action is 'sell', it's Date Opened; if 'buy', it's Date Closed
+                    // Action determines how to interpret the date:
+                    // - 'sell' or 'roll' = Date Opened (opening a position)
+                    // - 'buy' or 'expired' = Date Closed (closing a position)
                     const dateColumn = row['Date Open / Date Closed'] || row['Date Opened'] || row.dateOpened || row['Date_Opened'] || row['Date Open/Date Closed'];
                     let dateOpened, dateClosed;
                     
-                    if (action === 'sell') {
-                        // Sell = Date Opened
+                    if (action === 'sell' || action === 'roll') {
+                        // Sell/Roll = Date Opened
                         dateOpened = dateColumn;
                         dateClosed = row['Date Closed'] || row.dateClosed || row['Date_Closed'] || '';
-                    } else if (action === 'buy') {
-                        // Buy = Date Closed (this is a closing trade)
+                    } else if (action === 'buy' || action === 'expired') {
+                        // Buy/Expired = Date Closed (this is a closing trade)
                         dateClosed = dateColumn;
                         dateOpened = row['Date Opened'] || row.dateOpened || row['Date_Opened'] || dateColumn; // Fallback to same date
                     } else {
+                        // Unknown action - default to Date Opened
                         dateOpened = dateColumn;
                         dateClosed = '';
                     }
