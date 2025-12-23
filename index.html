@@ -8013,8 +8013,13 @@
                         errors.push(`Row ${rowNum}: Invalid premium`);
                         return;
                     }
-                    if (action !== 'sell' && action !== 'buy') {
-                        errors.push(`Row ${rowNum}: Action must be 'sell' or 'buy'`);
+                    // Allow $0 premium for expired trades
+                    if (premium < 0) {
+                        errors.push(`Row ${rowNum}: Premium cannot be negative`);
+                        return;
+                    }
+                    if (action !== 'sell' && action !== 'buy' && action !== 'expired' && action !== 'roll') {
+                        errors.push(`Row ${rowNum}: Action must be 'sell', 'buy', 'expired', or 'roll'`);
                         return;
                     }
                     if (type !== 'put' && type !== 'call') {
