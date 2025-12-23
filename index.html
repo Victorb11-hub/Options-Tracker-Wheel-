@@ -2828,13 +2828,11 @@
             
             // For closed SELL trades without a closePrice, try to find the matching BUY trade
             if (trade.action === 'sell' && trade.status === 'closed' && closingCost === 0 && trade.tradeRef) {
-                // Find the BUY trade with isClosingTrade that matches this trade
+                // Find the BUY trade that matches this trade (by tradeRef and symbol)
                 const buybackTrade = closedTrades.find(t => 
-                    t.isClosingTrade === true &&
                     t.action === 'buy' &&
                     t.tradeRef === trade.tradeRef &&
-                    t.symbol === trade.symbol &&
-                    Math.abs(new Date(t.dateOpened || t.dateClosed) - new Date(trade.dateClosed || trade.dateOpened)) < 86400000 // Within 1 day
+                    t.symbol === trade.symbol
                 );
                 
                 if (buybackTrade) {
@@ -8080,13 +8078,13 @@
                         trade.dateClosed = formattedDateClosed;
                         trade.closePrice = closePrice || premium; // Use closePrice if provided, else use premium
                         
-                        // Add to closedTrades
-                        closedTrades.push(trade);
-                        
                         // If it's a BUY action, mark as closing trade
-                        if (action === 'buy') {
+                        if (action === 'buy' || action === 'expired') {
                             trade.isClosingTrade = true;
                         }
+                        
+                        // Add to closedTrades
+                        closedTrades.push(trade);
                         
                         // Create or update group if tradeRef exists
                         if (tradeRef) {
