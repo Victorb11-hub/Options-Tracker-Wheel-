@@ -7952,7 +7952,13 @@
                     // Required fields
                     const symbol = String(row.Symbol || row.symbol || '').trim().toUpperCase();
                     const contracts = parseInt(row.Contracts || row.contracts);
-                    let premiumRaw = parseFloat(row.Premium || row.premium);
+                    
+                    // Handle premium - default to 0 if missing (for expired trades)
+                    let premiumRaw = parseFloat(row.Premium || row.premium || 0);
+                    if (isNaN(premiumRaw)) {
+                        premiumRaw = 0;
+                    }
+                    
                     const premiumFormat = String(row['Premium Format'] || row.premiumFormat || row['Premium_Format'] || 'per contract').toLowerCase();
                     
                     // Convert premium based on format
@@ -7971,7 +7977,7 @@
                     // Handle new "Date Open / Date Closed" column format
                     // Action determines how to interpret the date:
                     // - 'sell' or 'roll' = Date Opened (opening a position)
-                    // - 'buy' or 'expired' = Date Closed (closing a position)
+                    // - 'buy', 'expired', or 'assigned' = Date Closed (closing a position)
                     const dateColumn = row['Date Open / Date Closed'] || row['Date Opened'] || row.dateOpened || row['Date_Opened'] || row['Date Open/Date Closed'];
                     let dateOpened, dateClosed;
                     
@@ -7979,8 +7985,8 @@
                         // Sell/Roll = Date Opened
                         dateOpened = dateColumn;
                         dateClosed = row['Date Closed'] || row.dateClosed || row['Date_Closed'] || '';
-                    } else if (action === 'buy' || action === 'expired') {
-                        // Buy/Expired = Date Closed (this is a closing trade)
+                    } else if (action === 'buy' || action === 'expired' || action === 'assigned') {
+                        // Buy/Expired/Assigned = Date Closed (this is a closing trade)
                         dateClosed = dateColumn;
                         dateOpened = row['Date Opened'] || row.dateOpened || row['Date_Opened'] || dateColumn; // Fallback to same date
                     } else {
@@ -8018,8 +8024,8 @@
                         errors.push(`Row ${rowNum}: Premium cannot be negative`);
                         return;
                     }
-                    if (action !== 'sell' && action !== 'buy' && action !== 'expired' && action !== 'roll') {
-                        errors.push(`Row ${rowNum}: Action must be 'sell', 'buy', 'expired', or 'roll'`);
+                    if (action !== 'sell' && action !== 'buy' && action !== 'expired' && action !== 'roll' && action !== 'assigned') {
+                        errors.push(`Row ${rowNum}: Action must be 'sell', 'buy', 'expired', 'roll', or 'assigned'`);
                         return;
                     }
                     if (type !== 'put' && type !== 'call') {
