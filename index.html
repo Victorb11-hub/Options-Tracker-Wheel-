@@ -4956,28 +4956,35 @@
                 let totalPL = 0;
                 let totalReturns = 0;
 
+                // Calculate P&L for open positions
                 trades.forEach(trade => {
                     const cashReq = calculateCashRequired(trade);
                     totalCollateral += cashReq;
                     
-                    // Use forDisplay=true to get premium for each leg (including rolled trades)
-                    totalPL += calculatePL(trade, true);
+                    // For open trades, just show premium collected
+                    if (trade.action === 'sell') {
+                        totalPL += trade.premium * trade.contracts * 100;
+                    }
                     totalReturns += parseFloat(calculateReturnPercent(trade));
                 });
 
+            // Calculate P&L for closed positions
+            // Simple approach: Sum all SELL premiums, subtract all BUY premiums
             closedTrades.forEach(trade => {
-                // Skip trades without required fields
                 if (!trade.contracts || trade.premium === undefined) {
                     return;
                 }
                 
-                // Skip closing BUY trades - their cost is already factored into the SELL trade's P&L
-                if (trade.action === 'buy' && trade.isClosingTrade) {
-                    return;
-                }
+                const amount = trade.premium * trade.contracts * 100;
                 
-                // For other trades (SELL trades, expired, assigned, etc), include their P&L
-                totalPL += calculatePL(trade, true);
+                if (trade.action === 'sell' || trade.action === 'roll') {
+                    // SELL/ROLL = premium collected (positive)
+                    totalPL += amount;
+                } else if (trade.action === 'buy') {
+                    // BUY = premium paid (negative)
+                    totalPL -= amount;
+                }
+                // expired and assigned actions with $0 premium don't affect P&L
             });
 
             const avgReturn = trades.length > 0 ? (totalReturns / trades.length).toFixed(2) : 0;
