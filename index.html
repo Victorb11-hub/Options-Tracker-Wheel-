@@ -4973,8 +4973,12 @@
                     return;
                 }
                 
-                // For rolled trades, include ALL legs (SELL and BUY)
-                // Use forDisplay=true to get each leg's premium
+                // Skip closing BUY trades - their cost is already factored into the SELL trade's P&L
+                if (trade.action === 'buy' && trade.isClosingTrade) {
+                    return;
+                }
+                
+                // For other trades (SELL trades, expired, assigned, etc), include their P&L
                 totalPL += calculatePL(trade, true);
             });
 
