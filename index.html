@@ -7330,13 +7330,13 @@
                     'Contracts': 1,
                     'Strike': 150.00,
                     'Premium': 2.50,
+                    'Premium Format': 'per contract',
                     'Action': 'sell',
                     'Type': 'put',
-                    'Status': 'open',
-                    'Date Opened': '2024-12-01',
+                    'Date Open / Date Closed': '2024-12-01',
                     'Exp Date': '2024-12-15',
                     'Price At Action': 152.50,
-                    'Info': 'Opening position',
+                    'Info': 'Opening sell position - premium is 2.50 per contract',
                     'Trade Ref': '1',
                     'Account': 'Main'
                 },
@@ -7344,15 +7344,14 @@
                     'Symbol': 'AAPL',
                     'Contracts': 1,
                     'Strike': 150.00,
-                    'Premium': 0.50,
+                    'Premium': 50.00,
+                    'Premium Format': 'total dollars',
                     'Action': 'buy',
                     'Type': 'put',
-                    'Status': 'closed',
-                    'Date Opened': '2024-12-10',
-                    'Date Closed': '2024-12-10',
+                    'Date Open / Date Closed': '2024-12-10',
                     'Exp Date': '2024-12-15',
                     'Price At Action': 148.00,
-                    'Info': 'Closing position - profit',
+                    'Info': 'Closing buy - premium is $50 total (will convert to 0.50 per contract)',
                     'Trade Ref': '1',
                     'Account': 'Main'
                 },
@@ -7360,15 +7359,14 @@
                     'Symbol': 'TSLA',
                     'Contracts': 2,
                     'Strike': 220.00,
-                    'Premium': 3.00,
+                    'Premium': 600.00,
+                    'Premium Format': 'total dollars',
                     'Action': 'sell',
                     'Type': 'put',
-                    'Status': 'closed',
-                    'Date Opened': '2024-11-20',
-                    'Date Closed': '2024-11-28',
+                    'Date Open / Date Closed': '2024-11-20',
                     'Exp Date': '2024-12-20',
                     'Price At Action': 225.00,
-                    'Info': 'Expired worthless - kept full premium',
+                    'Info': 'Premium is $600 total (will convert to 3.00 per contract)',
                     'Trade Ref': '2',
                     'Account': 'IRA'
                 },
@@ -7377,11 +7375,10 @@
                     'Contracts': 1,
                     'Strike': 0,
                     'Premium': 1.25,
+                    'Premium Format': 'per contract',
                     'Action': 'sell',
                     'Type': 'put',
-                    'Status': 'closed',
-                    'Date Opened': '2024-11-15',
-                    'Date Closed': '2024-11-22',
+                    'Date Open / Date Closed': '2024-11-15',
                     'Exp Date': '',
                     'Price At Action': 0,
                     'Info': 'Expired worthless - no strike/exp needed',
@@ -7392,14 +7389,14 @@
                     'Symbol': 'NVDA',
                     'Contracts': 1,
                     'Strike': 155.00,
-                    'Premium': 0.99,
+                    'Premium': 99.00,
+                    'Premium Format': 'total dollars',
                     'Action': 'sell',
                     'Type': 'put',
-                    'Status': 'open',
-                    'Date Opened': '2024-11-25',
+                    'Date Open / Date Closed': '2024-11-25',
                     'Exp Date': '2024-12-05',
                     'Price At Action': 172.65,
-                    'Info': 'Currently open position',
+                    'Info': 'Premium is $99 total (will convert to 0.99 per contract)',
                     'Trade Ref': '5',
                     'Account': 'Roth IRA'
                 }
@@ -7934,10 +7931,40 @@
                     // Required fields
                     const symbol = String(row.Symbol || row.symbol || '').trim().toUpperCase();
                     const contracts = parseInt(row.Contracts || row.contracts);
-                    const premium = parseFloat(row.Premium || row.premium);
+                    let premiumRaw = parseFloat(row.Premium || row.premium);
+                    const premiumFormat = String(row['Premium Format'] || row.premiumFormat || row['Premium_Format'] || 'per contract').toLowerCase();
+                    
+                    // Convert premium based on format
+                    let premium;
+                    if (premiumFormat.includes('total') || premiumFormat.includes('dollar')) {
+                        // User entered total dollar amount - convert to per contract
+                        premium = premiumRaw / (contracts * 100);
+                    } else {
+                        // User entered per contract premium - use as is
+                        premium = premiumRaw;
+                    }
+                    
                     const action = String(row.Action || row.action || '').toLowerCase();
                     const type = String(row.Type || row.type || '').toLowerCase();
-                    const dateOpened = row['Date Opened'] || row.dateOpened || row['Date_Opened'];
+                    
+                    // Handle new "Date Open / Date Closed" column format
+                    // If Action is 'sell', it's Date Opened; if 'buy', it's Date Closed
+                    const dateColumn = row['Date Open / Date Closed'] || row['Date Opened'] || row.dateOpened || row['Date_Opened'] || row['Date Open/Date Closed'];
+                    let dateOpened, dateClosed;
+                    
+                    if (action === 'sell') {
+                        // Sell = Date Opened
+                        dateOpened = dateColumn;
+                        dateClosed = row['Date Closed'] || row.dateClosed || row['Date_Closed'] || '';
+                    } else if (action === 'buy') {
+                        // Buy = Date Closed (this is a closing trade)
+                        dateClosed = dateColumn;
+                        dateOpened = row['Date Opened'] || row.dateOpened || row['Date_Opened'] || dateColumn; // Fallback to same date
+                    } else {
+                        dateOpened = dateColumn;
+                        dateClosed = '';
+                    }
+                    
                     const status = String(row.Status || row.status || 'open').toLowerCase();
                     
                     // Optional fields (can be blank/zero)
@@ -7947,7 +7974,6 @@
                     const info = String(row.Info || row.info || row.Notes || row.notes || '');
                     const tradeRef = String(row['Trade Ref'] || row.tradeRef || row['Trade_Ref'] || '').trim();
                     const account = String(row.Account || row.account || '');
-                    const dateClosed = row['Date Closed'] || row.dateClosed || row['Date_Closed'] || '';
                     const closePrice = parseFloat(row['Close Price'] || row.closePrice || row['Close_Price'] || 0);
                     
                     // Validation
