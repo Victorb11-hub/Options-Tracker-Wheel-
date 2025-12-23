@@ -7914,6 +7914,8 @@
                             `✅ ${groupCount} trade groups\n\n` +
                             `This will REPLACE all current data. Continue?`)) {
                             
+                            captureState('Import from Excel/CSV');
+                            
                             trades = result.openTrades;
                             closedTrades = result.closedTrades;
                             tradeGroups = result.tradeGroups;
@@ -7924,6 +7926,7 @@
                             renderStockPositions();
                             updateStats();
                             updateLastRefDisplay();
+                            updateUndoRedoButtons();
                             
                             alert(`✅ Import successful!\n\n${openCount} open positions\n${closedCount} closed trades\n${groupCount} groups created`);
                         }
