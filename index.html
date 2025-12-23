@@ -8043,10 +8043,9 @@
                         errors.push(`Row ${rowNum}: Missing Date Opened`);
                         return;
                     }
-                    if (status === 'closed' && !dateClosed) {
-                        errors.push(`Row ${rowNum}: Status is 'closed' but no Date Closed provided`);
-                        return;
-                    }
+                    // Note: Status='closed' doesn't require dateClosed
+                    // For 'sell' actions, the date is dateOpened and dateClosed comes from the matching 'buy' trade
+                    // For 'buy' actions, the date IS the dateClosed
                     
                     // Format dates
                     const formattedDateOpened = formatExcelDate(dateOpened);
