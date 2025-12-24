@@ -5417,7 +5417,7 @@
                 document.getElementById('losingTrades').textContent = losingTrades;
                 document.getElementById('totalClosedTrades').textContent = totalClosedGroups;
 
-                // Calculate Average Days to Expiration (filter by account)
+                // Calculate Average Days to Expiration (filter by account and only future expirations)
                 let totalDTE = 0;
                 let minDTE = Infinity;
                 let maxDTE = -Infinity;
@@ -5425,10 +5425,13 @@
                 
                 trades.filter(filterByAccount).forEach(trade => {
                     const dte = calculateDaysToExpiration(trade.expDate);
-                    totalDTE += dte;
-                    if (dte < minDTE) minDTE = dte;
-                    if (dte > maxDTE) maxDTE = dte;
-                    filteredTradesCount++;
+                    // Only include trades with future expiration dates
+                    if (dte > 0) {
+                        totalDTE += dte;
+                        if (dte < minDTE) minDTE = dte;
+                        if (dte > maxDTE) maxDTE = dte;
+                        filteredTradesCount++;
+                    }
                 });
 
                 const avgDTE = filteredTradesCount > 0 ? Math.round(totalDTE / filteredTradesCount) : 0;
