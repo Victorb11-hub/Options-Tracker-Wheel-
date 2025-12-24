@@ -8144,15 +8144,18 @@
                     originalPut.status = 'assigned';
                     originalPut.assignmentPrice = originalPut.strike; // Use strike as assignment price
                     
-                    // Calculate NET P&L from ALL puts with this Trade Ref (including rolled positions)
-                    const allPutsInRef = closedTrades.filter(t =>
+                    const assignmentDate = new Date(assignedTrade.dateClosed || assignedTrade.dateOpened);
+                    
+                    // Calculate NET P&L from puts BEFORE assignment only
+                    const putsBeforeAssignment = closedTrades.filter(t =>
                         t.tradeRef === assignedTrade.tradeRef &&
                         t.symbol === assignedTrade.symbol &&
-                        t.type === 'put'
+                        t.type === 'put' &&
+                        new Date(t.dateOpened || t.dateClosed) <= assignmentDate
                     );
                     
                     let netPutPL = 0;
-                    allPutsInRef.forEach(put => {
+                    putsBeforeAssignment.forEach(put => {
                         const amount = put.premium * put.contracts * 100;
                         if (put.action === 'sell') {
                             netPutPL += amount;
@@ -8161,15 +8164,41 @@
                         }
                     });
                     
-                    // Find any covered calls with same Trade Ref (these are already in the arrays)
-                    const coveredCalls = [...openTrades, ...closedTrades].filter(t =>
+                    // Find covered calls AFTER assignment
+                    // Stop when we see puts again (means stock was sold)
+                    const callsAfterAssignment = [...openTrades, ...closedTrades].filter(t =>
                         t.tradeRef === assignedTrade.tradeRef &&
                         t.symbol === assignedTrade.symbol &&
                         t.type === 'call' &&
-                        t.action === 'sell'
-                    ).map(call => ({
+                        t.action === 'sell' &&
+                        new Date(t.dateOpened || t.dateClosed) > assignmentDate
+                    );
+                    
+                    // Check if there are any puts AFTER the assignment (means stock was sold)
+                    const putsAfterAssignment = [...openTrades, ...closedTrades].filter(t =>
+                        t.tradeRef === assignedTrade.tradeRef &&
+                        t.symbol === assignedTrade.symbol &&
+                        t.type === 'put' &&
+                        t.action === 'sell' &&
+                        new Date(t.dateOpened || t.dateClosed) > assignmentDate
+                    );
+                    
+                    // If there are puts after assignment, only include calls BEFORE the first new put
+                    let coveredCalls = callsAfterAssignment;
+                    if (putsAfterAssignment.length > 0) {
+                        const firstNewPutDate = new Date(Math.min(...putsAfterAssignment.map(p => 
+                            new Date(p.dateOpened || p.dateClosed).getTime()
+                        )));
+                        coveredCalls = callsAfterAssignment.filter(c =>
+                            new Date(c.dateOpened || c.dateClosed) < firstNewPutDate
+                        );
+                    }
+                    
+                    // Map covered calls to the format needed
+                    coveredCalls = coveredCalls.map(call => ({
                         strike: call.strike,
                         premium: call.premium * call.contracts * 100,
+                        expDate: call.expDate,
                         dateOpened: call.dateOpened,
                         dateClosed: call.dateClosed || null,
                         status: call.status
@@ -8202,7 +8231,14 @@
                     
                     stockPositions.push(stockPosition);
                     
-                    console.log(`✅ Created stock position from assignment: ${stockPosition.symbol} (${stockPosition.shares} shares)`);
+                    console.log(`✅ Created stock position from assignment:`);
+                    console.log(`   Symbol: ${stockPosition.symbol}`);
+                    console.log(`   Shares: ${stockPosition.shares}`);
+                    console.log(`   Cost Basis: $${stockPosition.costBasis}`);
+                    console.log(`   Assigned Price: $${stockPosition.assignedPrice}`);
+                    console.log(`   Assigned Date: ${stockPosition.assignedDate}`);
+                    console.log(`   Net Put P&L: $${netPutPL.toFixed(2)}`);
+                    console.log(`   Covered Calls: ${coveredCalls.length}`);
                 }
             });
             
