@@ -3848,6 +3848,20 @@
                 allTrades = [...openTradesForSymbol, ...closedTradesForSymbol];
             }
             
+            // DEDUPLICATE - remove trades that appear multiple times
+            const seen = new Set();
+            const uniqueTrades = [];
+            allTrades.forEach(trade => {
+                // Create a unique key based on trade properties
+                const key = `${trade.symbol}-${trade.action}-${trade.type}-${trade.strike}-${trade.premium}-${trade.dateOpened}-${trade.tradeRef}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueTrades.push(trade);
+                }
+            });
+            
+            allTrades = uniqueTrades;
+            
             // Apply additional filters (rolled, assigned)
             let filteredTrades = allTrades;
             if (symbolTradesFilter === 'rolled') {
