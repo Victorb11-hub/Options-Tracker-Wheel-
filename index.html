@@ -3528,7 +3528,7 @@
                 // Find roll history for this position
                 const rollHistory = findRollHistory(trade);
                 
-                console.log('Roll history for', trade.symbol, trade.strike, ':', rollHistory.length, 'trades');
+                // console.log('Roll history for', trade.symbol, trade.strike, ':', rollHistory.length, 'trades');
                 
                 if (rollHistory.length > 0) {
                     // Calculate cumulative P&L for this roll chain
@@ -3537,7 +3537,7 @@
                     // Add current open position premium (if sold)
                     if (trade.action === 'sell') {
                         rollPL += trade.premium * trade.contracts * 100;
-                        console.log('Current position premium:', trade.premium * trade.contracts * 100);
+                        // console.log('Current position premium:', trade.premium * trade.contracts * 100);
                     }
                     
                     // Calculate P&L from all history trades
@@ -3545,14 +3545,14 @@
                         const amount = histTrade.premium * histTrade.contracts * 100;
                         if (histTrade.action === 'sell') {
                             rollPL += amount;
-                            console.log('History SELL:', amount);
+                            // console.log('History SELL:', amount);
                         } else {
                             rollPL -= amount;
-                            console.log('History BUY:', -amount);
+                            // console.log('History BUY:', -amount);
                         }
                     });
                     
-                    console.log('Total Roll P/L:', rollPL);
+                    // console.log('Total Roll P/L:', rollPL);
                     
                     // Add the rollPL to the symbol total
                     symbolPL += rollPL;
@@ -3626,59 +3626,35 @@
 
         function findRollHistory(currentTrade) {
             const history = [];
-            const processedGroups = new Set();
             
-            console.log('Finding roll history for:', currentTrade.symbol, currentTrade.strike, currentTrade.dateOpened);
-            
-            // Function to recursively find all related roll groups
-            function findRelatedGroups(symbol) {
-                tradeGroups.forEach(group => {
-                    if (processedGroups.has(group.id)) return;
-                    if (!group.trades || !Array.isArray(group.trades)) return;
-                    
-                    // Check if this group contains the symbol and is a roll group
-                    const hasMatchingSymbol = group.trades.some(t => t.symbol === symbol);
-                    const isRollGroup = group.name.includes('Roll') || 
-                                       group.trades.some(t => t.info && (t.info.includes('Roll') || t.info.includes('roll')));
-                    
-                    if (hasMatchingSymbol && isRollGroup) {
-                        console.log('Found roll group:', group.name);
-                        processedGroups.add(group.id);
-                        
-                        // Add all trades from this group except the current open one
-                        group.trades.forEach(t => {
-                            // Don't add the exact current trade
-                            const isCurrent = t.symbol === currentTrade.symbol && 
-                                            t.strike === currentTrade.strike && 
-                                            t.dateOpened === currentTrade.dateOpened &&
-                                            t.expDate === currentTrade.expDate &&
-                                            t.premium === currentTrade.premium &&
-                                            t.status === 'open';
-                            
-                            if (!isCurrent) {
-                                // Check if this trade isn't already in history
-                                const alreadyAdded = history.some(h => 
-                                    h.symbol === t.symbol &&
-                                    h.strike === t.strike &&
-                                    h.dateOpened === t.dateOpened &&
-                                    h.premium === t.premium &&
-                                    h.action === t.action
-                                );
-                                
-                                if (!alreadyAdded) {
-                                    console.log('Adding to history:', t.symbol, t.strike, t.action, t.premium, t.dateOpened);
-                                    history.push(t);
-                                }
-                            }
-                        });
-                    }
-                });
+            // Only look for roll history if this trade has a tradeRef
+            if (!currentTrade.tradeRef) {
+                return history;
             }
             
-            // Find all related roll groups for this symbol
-            findRelatedGroups(currentTrade.symbol);
+            // Find the trade group that matches this specific trade ref
+            const matchingGroup = tradeGroups.find(g => 
+                g.name === `Trade Ref: ${currentTrade.tradeRef}`
+            );
             
-            console.log('Total history trades found:', history.length);
+            if (!matchingGroup || !matchingGroup.trades) {
+                return history;
+            }
+            
+            // Add all trades from this group except the current open one
+            matchingGroup.trades.forEach(t => {
+                // Don't add the exact current trade
+                const isCurrent = t.symbol === currentTrade.symbol && 
+                                t.strike === currentTrade.strike && 
+                                t.dateOpened === currentTrade.dateOpened &&
+                                t.expDate === currentTrade.expDate &&
+                                t.premium === currentTrade.premium &&
+                                t.status === 'open';
+                
+                if (!isCurrent) {
+                    history.push(t);
+                }
+            });
             
             // Sort by date (oldest first)
             history.sort((a, b) => new Date(a.dateOpened) - new Date(b.dateOpened));
@@ -3804,6 +3780,13 @@
             const tbody = document.getElementById('symbolTradesBody');
             if (!tbody) return;
             
+            console.log('=== renderSymbolTrades DEBUG ===');
+            console.log('Current Symbol:', currentSymbol);
+            console.log('Filter:', symbolTradesFilter);
+            console.log('Trades array length:', trades.length);
+            console.log('ClosedTrades array length:', closedTrades.length);
+            console.log('StockPositions array length:', stockPositions.length);
+            
             let allTrades = [];
             
             if (symbolTradesFilter === 'open') {
@@ -3815,6 +3798,8 @@
                     }
                 });
                 
+                console.log('Open refs from trades array:', Array.from(openRefs));
+                
                 // Add refs from stock positions
                 stockPositions.forEach(s => {
                     if (s.symbol === currentSymbol && s.tradeRef) {
@@ -3822,11 +3807,16 @@
                     }
                 });
                 
+                console.log('Open refs after adding stock positions:', Array.from(openRefs));
+                
                 // Get ALL trades (from closedTrades only) that match these refs
                 allTrades = closedTrades.filter(t => 
                     t.symbol === currentSymbol && 
                     openRefs.has(t.tradeRef)
                 );
+                
+                console.log('Filtered trades count:', allTrades.length);
+                console.log('Sample trades:', allTrades.slice(0, 3));
                 
             } else if (symbolTradesFilter === 'closed') {
                 // Get refs that are open
