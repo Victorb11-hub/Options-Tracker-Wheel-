@@ -3448,11 +3448,46 @@
                 // Use pre-sorted array
                 filteredTrades = window.sortedOpenByStock;
             } else {
-                // Filter BOTH open and closed trades by selected symbol
-                filteredTrades = [
-                    ...trades.filter(t => t.symbol === selectedSymbol),
-                    ...closedTrades.filter(t => t.symbol === selectedSymbol && !t.isClosingTrade)
-                ];
+                // Get open trades for this symbol
+                const openTradesForSymbol = trades.filter(t => t.symbol === selectedSymbol);
+                
+                // Get their trade refs
+                const openTradeRefs = new Set(openTradesForSymbol.map(t => t.tradeRef).filter(r => r));
+                
+                // Also include trade refs from open stock positions
+                const stockPos = stockPositions.filter(s => s.symbol === selectedSymbol && s.status === 'holding');
+                stockPos.forEach(s => {
+                    if (s.tradeRef) openTradeRefs.add(s.tradeRef);
+                });
+                
+                // Only pull closed trades that match these open refs
+                const closedTradesForSymbol = closedTrades.filter(t => 
+                    t.symbol === selectedSymbol && 
+                    openTradeRefs.has(t.tradeRef)
+                );
+                
+                filteredTrades = [...openTradesForSymbol, ...closedTradesForSymbol];
+                
+                // DEDUPLICATE - remove duplicate trades
+                const seen = new Map();
+                const uniqueTrades = [];
+                filteredTrades.forEach(trade => {
+                    // Create unique key based on trade properties
+                    const key = `${trade.symbol}-${trade.action}-${trade.type}-${trade.strike}-${trade.premium}-${trade.dateOpened}-${trade.expDate}`;
+                    if (!seen.has(key)) {
+                        seen.set(key, true);
+                        uniqueTrades.push(trade);
+                    }
+                });
+                filteredTrades = uniqueTrades;
+                
+                console.log('=== filterByStock DEBUG ===');
+                console.log('Selected symbol:', selectedSymbol);
+                console.log('Open trades for symbol:', openTradesForSymbol.length);
+                console.log('Closed trades for symbol:', closedTradesForSymbol.length);
+                console.log('Before dedup:', openTradesForSymbol.length + closedTradesForSymbol.length);
+                console.log('After dedup:', uniqueTrades.length);
+                
                 // Clear sorted array since we're using a new filter
                 window.sortedOpenByStock = null;
             }
@@ -3525,10 +3560,12 @@
                     </tr>
                 `;
                 
-                // Find roll history for this position
-                const rollHistory = findRollHistory(trade);
-                
-                // console.log('Roll history for', trade.symbol, trade.strike, ':', rollHistory.length, 'trades');
+                // ONLY show roll history for the FIRST OPEN trade (index 0), not for every closed trade
+                if (isOpenTrade && index === 0) {
+                    // Find roll history for this position
+                    const rollHistory = findRollHistory(trade);
+                    
+                    console.log('Roll history for trade', index, ':', rollHistory.length, 'trades');
                 
                 if (rollHistory.length > 0) {
                     // Calculate cumulative P&L for this roll chain
@@ -3603,9 +3640,15 @@
                     // No roll history - just add the current trade's P&L
                     symbolPL += pl;
                 }
+                } else {
+                    // For closed trades, just add their P&L (they're already in the roll history)
+                    // Don't double count
+                }
                 
-                // Add spacing between different positions
-                html += `<tr style="height: 20px; background: #000;"><td colspan="18"></td></tr>`;
+                // Add spacing between different positions (only after open trades)
+                if (isOpenTrade) {
+                    html += `<tr style="height: 20px; background: #000;"><td colspan="18"></td></tr>`;
+                }
             });
             
             // Add totals row
@@ -3786,6 +3829,20 @@
             console.log('Trades array length:', trades.length);
             console.log('ClosedTrades array length:', closedTrades.length);
             console.log('StockPositions array length:', stockPositions.length);
+            
+            // Show which trades are in the trades array for this symbol
+            const tradesForSymbol = trades.filter(t => t.symbol === currentSymbol);
+            console.log('Trades for', currentSymbol, ':', tradesForSymbol.length);
+            tradesForSymbol.forEach(t => {
+                console.log('  Trade:', t.action, t.type, t.strike, 'Ref:', t.tradeRef, 'Status:', t.status);
+            });
+            
+            // Show which stock positions exist for this symbol
+            const stockForSymbol = stockPositions.filter(s => s.symbol === currentSymbol);
+            console.log('Stock positions for', currentSymbol, ':', stockForSymbol.length);
+            stockForSymbol.forEach(s => {
+                console.log('  Stock:', s.shares, 'shares, Ref:', s.tradeRef);
+            });
             
             let allTrades = [];
             
