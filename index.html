@@ -3800,28 +3800,53 @@
             const tbody = document.getElementById('symbolTradesBody');
             if (!tbody) return;
             
-            // Get all trades for this symbol
-            const openTrades = trades.filter(t => t.symbol === currentSymbol).map(t => ({...t, isOpen: true}));
+            let allTrades = [];
             
-            // Get stock positions for this symbol to determine which closed trades are part of open positions
-            const stockPos = stockPositions.filter(s => s.symbol === currentSymbol && s.status === 'holding');
-            const openStockTradeRefs = new Set(stockPos.map(s => s.tradeRef));
-            
-            const closedTradesArray = closedTrades.filter(t => t.symbol === currentSymbol).map(t => ({
-                ...t, 
-                isOpen: openStockTradeRefs.has(t.tradeRef) // Mark as open if part of an open stock position
-            }));
-            
-            // Don't pull from groups - the trades and closedTrades arrays already have everything
-            let allTrades = [...openTrades, ...closedTradesArray];
-            
-            // Apply filter
-            let filteredTrades = allTrades;
             if (symbolTradesFilter === 'open') {
-                filteredTrades = allTrades.filter(t => t.isOpen);
+                // For OPEN filter: Only show trades from open positions
+                // Get open trades for this symbol
+                const openTradesForSymbol = trades.filter(t => t.symbol === currentSymbol);
+                
+                // Get their trade refs
+                const openTradeRefs = new Set(openTradesForSymbol.map(t => t.tradeRef).filter(r => r));
+                
+                // Also include trade refs from open stock positions
+                const stockPos = stockPositions.filter(s => s.symbol === currentSymbol && s.status === 'holding');
+                stockPos.forEach(s => {
+                    if (s.tradeRef) openTradeRefs.add(s.tradeRef);
+                });
+                
+                // Pull ALL trades (open and closed) that match these trade refs
+                const openPositionTrades = trades.filter(t => t.symbol === currentSymbol);
+                const closedPositionTrades = closedTrades.filter(t => 
+                    t.symbol === currentSymbol && 
+                    openTradeRefs.has(t.tradeRef)
+                );
+                
+                allTrades = [...openPositionTrades, ...closedPositionTrades];
+                
             } else if (symbolTradesFilter === 'closed') {
-                filteredTrades = allTrades.filter(t => !t.isOpen);
-            } else if (symbolTradesFilter === 'rolled') {
+                // For CLOSED filter: Only show fully closed positions (not part of open positions)
+                const stockPos = stockPositions.filter(s => s.symbol === currentSymbol && s.status === 'holding');
+                const openStockTradeRefs = new Set(stockPos.map(s => s.tradeRef));
+                const openTradeRefs = new Set(trades.filter(t => t.symbol === currentSymbol).map(t => t.tradeRef).filter(r => r));
+                
+                allTrades = closedTrades.filter(t => 
+                    t.symbol === currentSymbol && 
+                    !openStockTradeRefs.has(t.tradeRef) &&
+                    !openTradeRefs.has(t.tradeRef)
+                );
+                
+            } else {
+                // For ALL filter: Show everything
+                const openTradesForSymbol = trades.filter(t => t.symbol === currentSymbol);
+                const closedTradesForSymbol = closedTrades.filter(t => t.symbol === currentSymbol);
+                allTrades = [...openTradesForSymbol, ...closedTradesForSymbol];
+            }
+            
+            // Apply additional filters (rolled, assigned)
+            let filteredTrades = allTrades;
+            if (symbolTradesFilter === 'rolled') {
                 const rolledTradeRefs = new Set();
                 allTrades.forEach(t => {
                     if (t.isRolled && t.tradeRef && t.tradeRef.trim()) {
