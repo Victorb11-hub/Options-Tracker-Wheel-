@@ -8126,19 +8126,40 @@
             const assignedTrades = closedTrades.filter(t => t.action === 'assigned');
             
             assignedTrades.forEach(assignedTrade => {
-                // Find the original PUT that got assigned (same Trade Ref, action='sell', type='put')
-                const originalPut = closedTrades.find(t => 
+                // Find the LAST (most recent) PUT that got assigned (same Trade Ref, action='sell', type='put')
+                // Sort by date to get the last one
+                const putTrades = closedTrades.filter(t => 
                     t.tradeRef === assignedTrade.tradeRef &&
                     t.symbol === assignedTrade.symbol &&
                     t.action === 'sell' &&
                     t.type === 'put' &&
-                    t.status === 'closed'
-                );
+                    t.status === 'closed' &&
+                    t.strike // Must have a strike price
+                ).sort((a, b) => new Date(b.dateOpened) - new Date(a.dateOpened)); // Sort newest first
+                
+                const originalPut = putTrades[0]; // Get the most recent one
                 
                 if (originalPut) {
                     // Mark the original put as assigned
                     originalPut.status = 'assigned';
                     originalPut.assignmentPrice = originalPut.strike; // Use strike as assignment price
+                    
+                    // Calculate NET P&L from ALL puts with this Trade Ref (including rolled positions)
+                    const allPutsInRef = closedTrades.filter(t =>
+                        t.tradeRef === assignedTrade.tradeRef &&
+                        t.symbol === assignedTrade.symbol &&
+                        t.type === 'put'
+                    );
+                    
+                    let netPutPL = 0;
+                    allPutsInRef.forEach(put => {
+                        const amount = put.premium * put.contracts * 100;
+                        if (put.action === 'sell') {
+                            netPutPL += amount;
+                        } else if (put.action === 'buy') {
+                            netPutPL -= amount;
+                        }
+                    });
                     
                     // Find any covered calls with same Trade Ref (these are already in the arrays)
                     const coveredCalls = [...openTrades, ...closedTrades].filter(t =>
@@ -8171,7 +8192,7 @@
                             contracts: originalPut.contracts,
                             dateOpened: originalPut.dateOpened,
                             tradeRef: originalPut.tradeRef,
-                            premiumCollected: originalPut.premium * originalPut.contracts * 100
+                            premiumCollected: netPutPL  // Use NET P&L from all puts, not just last one
                         },
                         coveredCalls: coveredCalls,
                         account: assignedTrade.account || '',
