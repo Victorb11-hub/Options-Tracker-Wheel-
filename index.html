@@ -3841,7 +3841,9 @@
                         
                         if (!alreadyExists) {
                             if (trade.id) includedIds.add(trade.id);
-                            groupTrades.push({...trade, isOpen: trade.status === 'open'});
+                            // Check if this trade is part of an open stock position
+                            const isPartOfOpenStock = openStockTradeRefs.has(trade.tradeRef);
+                            groupTrades.push({...trade, isOpen: isPartOfOpenStock || trade.status === 'open'});
                         }
                     });
                 }
