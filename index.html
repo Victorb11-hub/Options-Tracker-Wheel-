@@ -3758,14 +3758,18 @@
 
         function showSymbolDetail(symbol) {
             currentSymbol = symbol;
-            symbolTradesFilter = 'all';
+            symbolTradesFilter = 'open';  // Default to open positions
             
             // Hide all other tabs
             document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
             
             // Show symbol detail tab
             document.getElementById('symbolDetailTab').style.display = 'block';
-            document.getElementById('symbolDetailTitle').textContent = `${symbol} - All Trades`;
+            document.getElementById('symbolDetailTitle').textContent = `${symbol} - Open Positions`;
+            
+            // Update button styles to show Open is selected
+            document.getElementById('symbolFilterOpenBtn').style.background = '#00ff88';
+            document.getElementById('symbolFilterOpenBtn').style.color = '#000';
             
             // Render the symbol trades
             renderSymbolTrades();
