@@ -8126,25 +8126,25 @@
             const assignedTrades = closedTrades.filter(t => t.action === 'assigned');
             
             assignedTrades.forEach(assignedTrade => {
-                // Find the LAST (most recent) PUT that got assigned (same Trade Ref, action='sell', type='put')
-                // Sort by date to get the last one
+                const assignmentDate = new Date(assignedTrade.dateClosed || assignedTrade.dateOpened);
+                
+                // Find the LAST (most recent) PUT BEFORE assignment that got assigned
                 const putTrades = closedTrades.filter(t => 
                     t.tradeRef === assignedTrade.tradeRef &&
                     t.symbol === assignedTrade.symbol &&
                     t.action === 'sell' &&
                     t.type === 'put' &&
                     t.status === 'closed' &&
-                    t.strike // Must have a strike price
+                    t.strike && // Must have a strike price
+                    new Date(t.dateOpened) <= assignmentDate // Must be BEFORE assignment
                 ).sort((a, b) => new Date(b.dateOpened) - new Date(a.dateOpened)); // Sort newest first
                 
-                const originalPut = putTrades[0]; // Get the most recent one
+                const originalPut = putTrades[0]; // Get the most recent one before assignment
                 
                 if (originalPut) {
                     // Mark the original put as assigned
                     originalPut.status = 'assigned';
                     originalPut.assignmentPrice = originalPut.strike; // Use strike as assignment price
-                    
-                    const assignmentDate = new Date(assignedTrade.dateClosed || assignedTrade.dateOpened);
                     
                     // Calculate NET P&L from puts BEFORE assignment only
                     const putsBeforeAssignment = closedTrades.filter(t =>
@@ -8194,15 +8194,54 @@
                         );
                     }
                     
-                    // Map covered calls to the format needed
-                    coveredCalls = coveredCalls.map(call => ({
-                        strike: call.strike,
-                        premium: call.premium * call.contracts * 100,
-                        expDate: call.expDate,
-                        dateOpened: call.dateOpened,
-                        dateClosed: call.dateClosed || null,
-                        status: call.status
-                    }));
+                    // Map covered calls to the format needed, calculating NET premium (sell - buy if rolled)
+                    const allCallsInRange = [...openTrades, ...closedTrades].filter(t =>
+                        t.tradeRef === assignedTrade.tradeRef &&
+                        t.symbol === assignedTrade.symbol &&
+                        t.type === 'call' &&
+                        new Date(t.dateOpened || t.dateClosed) > assignmentDate
+                    );
+                    
+                    // If there are puts after, filter by first put date
+                    let callsToProcess = allCallsInRange;
+                    if (putsAfterAssignment.length > 0) {
+                        const firstNewPutDate = new Date(Math.min(...putsAfterAssignment.map(p => 
+                            new Date(p.dateOpened || p.dateClosed).getTime()
+                        )));
+                        callsToProcess = allCallsInRange.filter(c =>
+                            new Date(c.dateOpened || c.dateClosed) < firstNewPutDate
+                        );
+                    }
+                    
+                    // Build covered calls with NET premium (sell - buy if rolled)
+                    const sellCalls = callsToProcess.filter(c => c.action === 'sell');
+                    const buyCalls = callsToProcess.filter(c => c.action === 'buy');
+                    
+                    coveredCalls = sellCalls.map(sellCall => {
+                        const sellPremium = sellCall.premium * sellCall.contracts * 100;
+                        const sellDate = new Date(sellCall.dateOpened || sellCall.dateClosed);
+                        
+                        // Find the next BUY call after this SELL (if rolled)
+                        const matchingBuy = buyCalls.find(buyCall => {
+                            const buyDate = new Date(buyCall.dateOpened || buyCall.dateClosed);
+                            return buyDate >= sellDate;
+                        });
+                        
+                        let netPremium = sellPremium;
+                        if (matchingBuy) {
+                            const buyPremium = matchingBuy.premium * matchingBuy.contracts * 100;
+                            netPremium = sellPremium - buyPremium;
+                        }
+                        
+                        return {
+                            strike: sellCall.strike,
+                            premium: netPremium,  // NET premium (sell - buy)
+                            expDate: sellCall.expDate,
+                            dateOpened: sellCall.dateOpened,
+                            dateClosed: sellCall.dateClosed || null,
+                            status: sellCall.status
+                        };
+                    });
                     
                     // Create stock position
                     const stockPosition = {
