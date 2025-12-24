@@ -7916,11 +7916,13 @@
                         const openCount = result.openTrades.length;
                         const closedCount = result.closedTrades.length;
                         const groupCount = result.tradeGroups.length;
+                        const stockCount = result.stockPositions ? result.stockPositions.length : 0;
                         
                         if (confirm(`Import Preview:\n\n` +
                             `✅ ${openCount} open positions\n` +
                             `✅ ${closedCount} closed trades\n` +
-                            `✅ ${groupCount} trade groups\n\n` +
+                            `✅ ${groupCount} trade groups\n` +
+                            `✅ ${stockCount} stock positions\n\n` +
                             `This will REPLACE all current data. Continue?`)) {
                             
                             captureState('Import from Excel/CSV');
@@ -7928,7 +7930,7 @@
                             trades = result.openTrades;
                             closedTrades = result.closedTrades;
                             tradeGroups = result.tradeGroups;
-                            stockPositions = []; // Reset stock positions
+                            stockPositions = result.stockPositions || [];
                             
                             saveData();
                             renderTables();
@@ -7937,7 +7939,7 @@
                             updateLastRefDisplay();
                             updateUndoRedoButtons();
                             
-                            alert(`✅ Import successful!\n\n${openCount} open positions\n${closedCount} closed trades\n${groupCount} groups created`);
+                            alert(`✅ Import successful!\n\n${openCount} open positions\n${closedCount} closed trades\n${groupCount} groups created\n${stockCount} stock positions created`);
                         }
                     } catch (error) {
                         console.error('Import error:', error);
@@ -8117,7 +8119,73 @@
                 }
             });
             
-            return { openTrades, closedTrades, tradeGroups, errors };
+            // After processing all trades, create stock positions from assigned trades
+            const stockPositions = [];
+            
+            // Find all 'assigned' action trades
+            const assignedTrades = closedTrades.filter(t => t.action === 'assigned');
+            
+            assignedTrades.forEach(assignedTrade => {
+                // Find the original PUT that got assigned (same Trade Ref, action='sell', type='put')
+                const originalPut = closedTrades.find(t => 
+                    t.tradeRef === assignedTrade.tradeRef &&
+                    t.symbol === assignedTrade.symbol &&
+                    t.action === 'sell' &&
+                    t.type === 'put' &&
+                    t.status === 'closed'
+                );
+                
+                if (originalPut) {
+                    // Mark the original put as assigned
+                    originalPut.status = 'assigned';
+                    originalPut.assignmentPrice = originalPut.strike; // Use strike as assignment price
+                    
+                    // Find any covered calls with same Trade Ref (these are already in the arrays)
+                    const coveredCalls = [...openTrades, ...closedTrades].filter(t =>
+                        t.tradeRef === assignedTrade.tradeRef &&
+                        t.symbol === assignedTrade.symbol &&
+                        t.type === 'call' &&
+                        t.action === 'sell'
+                    ).map(call => ({
+                        strike: call.strike,
+                        premium: call.premium * call.contracts * 100,
+                        dateOpened: call.dateOpened,
+                        dateClosed: call.dateClosed || null,
+                        status: call.status
+                    }));
+                    
+                    // Create stock position
+                    const stockPosition = {
+                        id: Date.now() + Math.random(),
+                        symbol: assignedTrade.symbol,
+                        shares: assignedTrade.contracts * 100,
+                        costBasis: originalPut.strike,
+                        assignedPrice: originalPut.strike,
+                        totalCost: originalPut.strike * assignedTrade.contracts * 100,
+                        totalValue: originalPut.strike * assignedTrade.contracts * 100,
+                        assignedDate: assignedTrade.dateClosed || assignedTrade.dateOpened,
+                        originalPutId: originalPut.id,
+                        originalPut: {
+                            strike: originalPut.strike,
+                            premium: originalPut.premium,
+                            contracts: originalPut.contracts,
+                            dateOpened: originalPut.dateOpened,
+                            tradeRef: originalPut.tradeRef,
+                            premiumCollected: originalPut.premium * originalPut.contracts * 100
+                        },
+                        coveredCalls: coveredCalls,
+                        account: assignedTrade.account || '',
+                        tradeRef: assignedTrade.tradeRef || '',
+                        status: 'holding'
+                    };
+                    
+                    stockPositions.push(stockPosition);
+                    
+                    console.log(`✅ Created stock position from assignment: ${stockPosition.symbol} (${stockPosition.shares} shares)`);
+                }
+            });
+            
+            return { openTrades, closedTrades, tradeGroups, stockPositions, errors };
         }
 
         function formatExcelDate(dateValue) {
