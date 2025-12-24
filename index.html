@@ -3812,44 +3812,8 @@
                 isOpen: openStockTradeRefs.has(t.tradeRef) // Mark as open if part of an open stock position
             }));
             
-            // Get trades from groups
-            const includedIds = new Set();
-            openTrades.forEach(t => { if (t.id) includedIds.add(t.id); });
-            closedTradesArray.forEach(t => { if (t.id) includedIds.add(t.id); });
-            
-            const groupTrades = [];
-            tradeGroups.forEach(group => {
-                if (group.trades && Array.isArray(group.trades)) {
-                    group.trades.forEach(trade => {
-                        if (trade.symbol !== currentSymbol) return;
-                        
-                        if (trade.id && includedIds.has(trade.id)) return;
-                        
-                        const alreadyExists = openTrades.some(t => 
-                            t.symbol === trade.symbol && 
-                            t.dateOpened === trade.dateOpened && 
-                            t.strike === trade.strike &&
-                            t.premium === trade.premium &&
-                            t.action === trade.action
-                        ) || closedTradesArray.some(t => 
-                            t.symbol === trade.symbol && 
-                            t.dateOpened === trade.dateOpened && 
-                            t.strike === trade.strike &&
-                            t.premium === trade.premium &&
-                            t.action === trade.action
-                        );
-                        
-                        if (!alreadyExists) {
-                            if (trade.id) includedIds.add(trade.id);
-                            // Check if this trade is part of an open stock position
-                            const isPartOfOpenStock = openStockTradeRefs.has(trade.tradeRef);
-                            groupTrades.push({...trade, isOpen: isPartOfOpenStock || trade.status === 'open'});
-                        }
-                    });
-                }
-            });
-            
-            let allTrades = [...openTrades, ...closedTradesArray, ...groupTrades];
+            // Don't pull from groups - the trades and closedTrades arrays already have everything
+            let allTrades = [...openTrades, ...closedTradesArray];
             
             // Apply filter
             let filteredTrades = allTrades;
