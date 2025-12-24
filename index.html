@@ -8164,8 +8164,7 @@
                         }
                     });
                     
-                    // Find covered calls AFTER assignment
-                    // Stop when we see puts again (means stock was sold)
+                    // Find ALL covered calls with same Trade Ref AFTER assignment
                     const callsAfterAssignment = [...openTrades, ...closedTrades].filter(t =>
                         t.tradeRef === assignedTrade.tradeRef &&
                         t.symbol === assignedTrade.symbol &&
@@ -8174,7 +8173,7 @@
                         new Date(t.dateOpened || t.dateClosed) > assignmentDate
                     );
                     
-                    // Check if there are any puts AFTER the assignment (means stock was sold)
+                    // Find ALL puts AFTER assignment (these are protective puts, not a new cycle)
                     const putsAfterAssignment = [...openTrades, ...closedTrades].filter(t =>
                         t.tradeRef === assignedTrade.tradeRef &&
                         t.symbol === assignedTrade.symbol &&
@@ -8183,35 +8182,31 @@
                         new Date(t.dateOpened || t.dateClosed) > assignmentDate
                     );
                     
-                    // If there are puts after assignment, only include calls BEFORE the first new put
-                    let coveredCalls = callsAfterAssignment;
-                    if (putsAfterAssignment.length > 0) {
-                        const firstNewPutDate = new Date(Math.min(...putsAfterAssignment.map(p => 
-                            new Date(p.dateOpened || p.dateClosed).getTime()
-                        )));
-                        coveredCalls = callsAfterAssignment.filter(c =>
-                            new Date(c.dateOpened || c.dateClosed) < firstNewPutDate
-                        );
-                    }
+                    // Calculate net P&L from puts AFTER assignment
+                    const allPutsAfter = [...openTrades, ...closedTrades].filter(t =>
+                        t.tradeRef === assignedTrade.tradeRef &&
+                        t.symbol === assignedTrade.symbol &&
+                        t.type === 'put' &&
+                        new Date(t.dateOpened || t.dateClosed) > assignmentDate
+                    );
                     
-                    // Map covered calls to the format needed, calculating NET premium (sell - buy if rolled)
-                    const allCallsInRange = [...openTrades, ...closedTrades].filter(t =>
+                    let netPutsAfterPL = 0;
+                    allPutsAfter.forEach(put => {
+                        const amount = put.premium * put.contracts * 100;
+                        if (put.action === 'sell') {
+                            netPutsAfterPL += amount;
+                        } else if (put.action === 'buy') {
+                            netPutsAfterPL -= amount;
+                        }
+                    });
+                    
+                    // All calls after assignment (no filtering by first put)
+                    let callsToProcess = [...openTrades, ...closedTrades].filter(t =>
                         t.tradeRef === assignedTrade.tradeRef &&
                         t.symbol === assignedTrade.symbol &&
                         t.type === 'call' &&
                         new Date(t.dateOpened || t.dateClosed) > assignmentDate
                     );
-                    
-                    // If there are puts after, filter by first put date
-                    let callsToProcess = allCallsInRange;
-                    if (putsAfterAssignment.length > 0) {
-                        const firstNewPutDate = new Date(Math.min(...putsAfterAssignment.map(p => 
-                            new Date(p.dateOpened || p.dateClosed).getTime()
-                        )));
-                        callsToProcess = allCallsInRange.filter(c =>
-                            new Date(c.dateOpened || c.dateClosed) < firstNewPutDate
-                        );
-                    }
                     
                     // Build covered calls with NET premium (sell - buy if rolled)
                     const sellCalls = callsToProcess.filter(c => c.action === 'sell');
@@ -8260,7 +8255,7 @@
                             contracts: originalPut.contracts,
                             dateOpened: originalPut.dateOpened,
                             tradeRef: originalPut.tradeRef,
-                            premiumCollected: netPutPL  // Use NET P&L from all puts, not just last one
+                            premiumCollected: netPutPL + netPutsAfterPL  // Include puts before AND after assignment
                         },
                         coveredCalls: coveredCalls,
                         account: assignedTrade.account || '',
