@@ -3802,7 +3802,15 @@
             
             // Get all trades for this symbol
             const openTrades = trades.filter(t => t.symbol === currentSymbol).map(t => ({...t, isOpen: true}));
-            const closedTradesArray = closedTrades.filter(t => t.symbol === currentSymbol).map(t => ({...t, isOpen: false}));
+            
+            // Get stock positions for this symbol to determine which closed trades are part of open positions
+            const stockPos = stockPositions.filter(s => s.symbol === currentSymbol && s.status === 'holding');
+            const openStockTradeRefs = new Set(stockPos.map(s => s.tradeRef));
+            
+            const closedTradesArray = closedTrades.filter(t => t.symbol === currentSymbol).map(t => ({
+                ...t, 
+                isOpen: openStockTradeRefs.has(t.tradeRef) // Mark as open if part of an open stock position
+            }));
             
             // Get trades from groups
             const includedIds = new Set();
