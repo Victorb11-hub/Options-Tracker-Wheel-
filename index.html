@@ -3807,60 +3807,51 @@
             let allTrades = [];
             
             if (symbolTradesFilter === 'open') {
-                // For OPEN filter: Only show trades from open positions
-                // Get open trades for this symbol
-                const openTradesForSymbol = trades.filter(t => t.symbol === currentSymbol);
-                
-                // Get their trade refs
-                const openTradeRefs = new Set(openTradesForSymbol.map(t => t.tradeRef).filter(r => r));
-                
-                // Also include trade refs from open stock positions
-                const stockPos = stockPositions.filter(s => s.symbol === currentSymbol && s.status === 'holding');
-                stockPos.forEach(s => {
-                    if (s.tradeRef) openTradeRefs.add(s.tradeRef);
+                // Get trade refs from open positions (trades array)
+                const openRefs = new Set();
+                trades.forEach(t => {
+                    if (t.symbol === currentSymbol && t.tradeRef) {
+                        openRefs.add(t.tradeRef);
+                    }
                 });
                 
-                // Pull ALL trades (open and closed) that match these trade refs
-                const openPositionTrades = trades.filter(t => t.symbol === currentSymbol);
-                const closedPositionTrades = closedTrades.filter(t => 
-                    t.symbol === currentSymbol && 
-                    openTradeRefs.has(t.tradeRef)
-                );
+                // Add refs from stock positions
+                stockPositions.forEach(s => {
+                    if (s.symbol === currentSymbol && s.tradeRef) {
+                        openRefs.add(s.tradeRef);
+                    }
+                });
                 
-                allTrades = [...openPositionTrades, ...closedPositionTrades];
-                
-            } else if (symbolTradesFilter === 'closed') {
-                // For CLOSED filter: Only show fully closed positions (not part of open positions)
-                const stockPos = stockPositions.filter(s => s.symbol === currentSymbol && s.status === 'holding');
-                const openStockTradeRefs = new Set(stockPos.map(s => s.tradeRef));
-                const openTradeRefs = new Set(trades.filter(t => t.symbol === currentSymbol).map(t => t.tradeRef).filter(r => r));
-                
+                // Get ALL trades (from closedTrades only) that match these refs
                 allTrades = closedTrades.filter(t => 
                     t.symbol === currentSymbol && 
-                    !openStockTradeRefs.has(t.tradeRef) &&
-                    !openTradeRefs.has(t.tradeRef)
+                    openRefs.has(t.tradeRef)
+                );
+                
+            } else if (symbolTradesFilter === 'closed') {
+                // Get refs that are open
+                const openRefs = new Set();
+                trades.forEach(t => {
+                    if (t.symbol === currentSymbol && t.tradeRef) {
+                        openRefs.add(t.tradeRef);
+                    }
+                });
+                stockPositions.forEach(s => {
+                    if (s.symbol === currentSymbol && s.tradeRef) {
+                        openRefs.add(s.tradeRef);
+                    }
+                });
+                
+                // Show closed trades NOT in open refs
+                allTrades = closedTrades.filter(t => 
+                    t.symbol === currentSymbol && 
+                    !openRefs.has(t.tradeRef)
                 );
                 
             } else {
-                // For ALL filter: Show everything
-                const openTradesForSymbol = trades.filter(t => t.symbol === currentSymbol);
-                const closedTradesForSymbol = closedTrades.filter(t => t.symbol === currentSymbol);
-                allTrades = [...openTradesForSymbol, ...closedTradesForSymbol];
+                // ALL - just show closedTrades for this symbol
+                allTrades = closedTrades.filter(t => t.symbol === currentSymbol);
             }
-            
-            // DEDUPLICATE - remove trades that appear multiple times
-            const seen = new Set();
-            const uniqueTrades = [];
-            allTrades.forEach(trade => {
-                // Create a unique key based on trade properties
-                const key = `${trade.symbol}-${trade.action}-${trade.type}-${trade.strike}-${trade.premium}-${trade.dateOpened}-${trade.tradeRef}`;
-                if (!seen.has(key)) {
-                    seen.add(key);
-                    uniqueTrades.push(trade);
-                }
-            });
-            
-            allTrades = uniqueTrades;
             
             // Apply additional filters (rolled, assigned)
             let filteredTrades = allTrades;
