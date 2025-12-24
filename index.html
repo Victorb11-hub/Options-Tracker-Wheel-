@@ -6544,7 +6544,7 @@
                 }
                 
                 const callsCount = stock.coveredCalls.length;
-                const totalCallPremiums = stock.coveredCalls.reduce((sum, call) => sum + call.premium, 0);
+                const totalCallPremiums = stock.netCallPL || stock.coveredCalls.reduce((sum, call) => sum + call.premium, 0);  // Use netCallPL if available
                 const putPremium = stock.originalPut.premiumCollected || 0;
                 const runningPL = putPremium + totalCallPremiums;
                 
@@ -8212,25 +8212,26 @@
                     const sellCalls = callsToProcess.filter(c => c.action === 'sell');
                     const buyCalls = callsToProcess.filter(c => c.action === 'buy');
                     
+                    // Calculate total net from all calls
+                    let totalCallSells = 0;
+                    let totalCallBuys = 0;
+                    
+                    sellCalls.forEach(c => {
+                        totalCallSells += c.premium * c.contracts * 100;
+                    });
+                    
+                    buyCalls.forEach(c => {
+                        totalCallBuys += c.premium * c.contracts * 100;
+                    });
+                    
+                    const netCallPL = totalCallSells - totalCallBuys;
+                    
+                    // For display, show each SELL call with its individual premium (not netted)
+                    // The netting happens in the total Running P&L calculation
                     coveredCalls = sellCalls.map(sellCall => {
-                        const sellPremium = sellCall.premium * sellCall.contracts * 100;
-                        const sellDate = new Date(sellCall.dateOpened || sellCall.dateClosed);
-                        
-                        // Find the next BUY call after this SELL (if rolled)
-                        const matchingBuy = buyCalls.find(buyCall => {
-                            const buyDate = new Date(buyCall.dateOpened || buyCall.dateClosed);
-                            return buyDate >= sellDate;
-                        });
-                        
-                        let netPremium = sellPremium;
-                        if (matchingBuy) {
-                            const buyPremium = matchingBuy.premium * matchingBuy.contracts * 100;
-                            netPremium = sellPremium - buyPremium;
-                        }
-                        
                         return {
                             strike: sellCall.strike,
-                            premium: netPremium,  // NET premium (sell - buy)
+                            premium: sellCall.premium * sellCall.contracts * 100,  // Individual sell premium
                             expDate: sellCall.expDate,
                             dateOpened: sellCall.dateOpened,
                             dateClosed: sellCall.dateClosed || null,
@@ -8258,6 +8259,7 @@
                             premiumCollected: netPutPL + netPutsAfterPL  // Include puts before AND after assignment
                         },
                         coveredCalls: coveredCalls,
+                        netCallPL: netCallPL,  // Store the net call P&L separately
                         account: assignedTrade.account || '',
                         tradeRef: assignedTrade.tradeRef || '',
                         status: 'holding'
